@@ -14,19 +14,28 @@ public struct Space: Codable, Identifiable, Hashable, Sendable {
     public var displayName: String?
     public var lastActiveTime: Date?
     public var singleUserBotDm: Bool?
+    public var spaceThreadingState: String?
 
     public var id: String { name }
     public var kind: Kind { spaceType.flatMap(Kind.init(rawValue:)) ?? .unknown }
 
+    /// The chat that Google Meet creates for a calendar event. The API has no
+    /// flag for these. In practice they are the named spaces without threading;
+    /// spaces that people create are threaded.
+    public var isMeetingChat: Bool {
+        kind == .space && spaceThreadingState == "UNTHREADED_MESSAGES"
+    }
+
     public init(
         name: String, spaceType: String? = nil, displayName: String? = nil,
-        lastActiveTime: Date? = nil, singleUserBotDm: Bool? = nil
+        lastActiveTime: Date? = nil, singleUserBotDm: Bool? = nil, spaceThreadingState: String? = nil
     ) {
         self.name = name
         self.spaceType = spaceType
         self.displayName = displayName
         self.lastActiveTime = lastActiveTime
         self.singleUserBotDm = singleUserBotDm
+        self.spaceThreadingState = spaceThreadingState
     }
 }
 

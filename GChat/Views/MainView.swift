@@ -70,6 +70,7 @@ struct SidebarView: View {
             section("Direct Messages", filtered(store.directMessages))
             section("Group Chats", filtered(store.groupChats))
             section("Spaces", filtered(store.namedSpaces))
+            section("Meetings", filtered(store.meetingChats))
         }
         .searchable(text: $search, placement: .sidebar, prompt: "Search")
         .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 400)
@@ -183,7 +184,7 @@ struct SpaceRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 22)
         default:
-            Image(systemName: "number")
+            Image(systemName: space.isMeetingChat ? "video" : "number")
                 .foregroundStyle(.secondary)
                 .frame(width: 22)
         }

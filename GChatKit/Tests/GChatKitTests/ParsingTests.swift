@@ -26,17 +26,21 @@ import Testing
         let json = """
         {"spaces": [
           {"name": "spaces/AAA", "spaceType": "SPACE", "displayName": "Team",
+           "spaceThreadingState": "THREADED_MESSAGES",
            "lastActiveTime": "2026-10-01T09:30:00.123456Z"},
+          {"name": "spaces/MMM", "spaceType": "SPACE", "displayName": "Sync - Apr 15",
+           "spaceThreadingState": "UNTHREADED_MESSAGES"},
           {"name": "spaces/BBB", "spaceType": "DIRECT_MESSAGE", "singleUserBotDm": false},
           {"name": "spaces/CCC", "spaceType": "SOMETHING_NEW"}
         ]}
         """
         struct Page: Decodable { var spaces: [Space] }
         let spaces = try RFC3339.makeDecoder().decode(Page.self, from: Data(json.utf8)).spaces
-        #expect(spaces.map(\.kind) == [.space, .directMessage, .unknown])
+        #expect(spaces.map(\.kind) == [.space, .space, .directMessage, .unknown])
+        #expect(spaces.map(\.isMeetingChat) == [false, true, false, false])
         #expect(spaces[0].displayName == "Team")
         #expect(spaces[0].lastActiveTime != nil)
-        #expect(spaces[1].lastActiveTime == nil)
+        #expect(spaces[2].lastActiveTime == nil)
     }
 
     @Test func decodesMessageWithMentionAndAttachment() throws {

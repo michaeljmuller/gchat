@@ -173,8 +173,10 @@ Tests for the non-UI code:
 
 ## Using it
 
-- Sidebar: direct messages, group chats and spaces in separate sections,
-  most recently active on top. A dot and bold title mean unread. The search field filters.
+- Sidebar: direct messages, group chats, spaces and meeting chats in
+  separate sections, most recently active on top. Meeting chats are the ones
+  Google Meet creates for calendar events; Google does not label them, so
+  the app treats a named space without threading as a meeting chat. A dot and bold title mean unread. The search field filters.
 - Command-N starts a new conversation. Pick one person for a direct message
   or several (Command-click or Shift-click) for a group chat, then click
   Chat. Double-clicking a person starts a direct message straight away. If

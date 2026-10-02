@@ -133,8 +133,13 @@ public final class ChatStore {
         spaces.filter { $0.kind == .groupChat }
     }
 
+    /// Spaces that people created, as opposed to meeting chats.
     public var namedSpaces: [Space] {
-        spaces.filter { $0.kind != .directMessage && $0.kind != .groupChat }
+        spaces.filter { $0.kind != .directMessage && $0.kind != .groupChat && !$0.isMeetingChat }
+    }
+
+    public var meetingChats: [Space] {
+        spaces.filter(\.isMeetingChat)
     }
 
     public func title(for space: Space) -> String {
