@@ -281,6 +281,7 @@ public final class ChatStore {
     public func refresh() async {
         await refreshSpaces()
         await loadDirectory()
+        if let selection { await open(selection) }
     }
 
     /// People to offer for a new conversation: the organization's directory, or,
@@ -299,10 +300,6 @@ public final class ChatStore {
             }
     }
 
-    public func reloadDirectory() async {
-        await loadDirectory()
-        if let selection { await open(selection) }
-    }
 
     // MARK: - Conversation list
 
