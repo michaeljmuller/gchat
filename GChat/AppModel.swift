@@ -167,6 +167,7 @@ enum AppSettings {
     static let sidebarSortKey = "sidebarSort"
 
     static let hideUnnamedAppsKey = "hideUnnamedAppConversations"
+    static let hideAppsKey = "hideAppConversations"
 
     /// Whether the sidebar settings hide this conversation. Reads the stored
     /// settings directly; views that must update live also observe the keys.
@@ -174,6 +175,9 @@ enum AppSettings {
     static func isHidden(_ space: Space, in store: ChatStore) -> Bool {
         let defaults = UserDefaults.standard
         if defaults.object(forKey: hideDeletedKey) as? Bool ?? true, store.isWithDeletedUser(space) {
+            return true
+        }
+        if defaults.bool(forKey: hideAppsKey), store.isWithApp(space) {
             return true
         }
         if defaults.object(forKey: hideUnnamedAppsKey) as? Bool ?? true, store.isWithUnnamedApp(space) {

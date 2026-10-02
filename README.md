@@ -189,8 +189,9 @@ Tests for the non-UI code:
   conversations.
 - Settings (Command-comma): sort the sidebar by most recent activity or
   alphabetically, show or hide the date of last activity next to each
-  conversation, hide direct messages with deleted users and conversations with
-  apps that Google gives no name for (both hidden by default),
+  conversation, hide direct messages with deleted users and with apps that Google
+  gives no name for (both hidden by default), hide direct messages with all
+  apps (off by default),
   the notification options, and Sign Out.
 - Reading a conversation here marks it read in Google Chat on your other
   devices, and the other way round.

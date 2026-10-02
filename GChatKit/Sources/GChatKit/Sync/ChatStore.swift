@@ -175,9 +175,14 @@ public final class ChatStore {
         return titles[space.name] == Self.deletedName
     }
 
-    /// True for a conversation with a Chat app that Google gives no name for.
+    /// True for a direct message between the user and a Chat app.
+    public func isWithApp(_ space: Space) -> Bool {
+        space.singleUserBotDm == true
+    }
+
+    /// True for a direct message with a Chat app that Google gives no name for.
     public func isWithUnnamedApp(_ space: Space) -> Bool {
-        space.singleUserBotDm == true && (space.displayName ?? "").isEmpty && titles[space.name] == nil
+        isWithApp(space) && (space.displayName ?? "").isEmpty && titles[space.name] == nil
     }
 
     /// The other person in a direct message, when known.
