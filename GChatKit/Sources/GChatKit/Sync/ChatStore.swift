@@ -66,6 +66,8 @@ public final class ChatStore {
     private var titles: [String: String]
     /// Direct message space -> the other person's user resource name.
     private var partners: [String: String]
+    /// Group chat space -> the other members' user resource names.
+    @ObservationIgnored private var groupMembers: [String: Set<String>]
     private var profiles: [String: Profile]
     /// Names taken from Chat responses, used until the People API answers.
     private var seedNames: [String: String] = [:]
@@ -87,6 +89,7 @@ public final class ChatStore {
         static let selection = "selectedSpace"
         static let titles = "spaceTitles"
         static let partners = "spacePartners"
+        static let groupMembers = "groupMembers"
         static let profiles = "profiles"
     }
 
@@ -100,6 +103,8 @@ public final class ChatStore {
         self.defaults = defaults
         self.titles = defaults.dictionary(forKey: Keys.titles) as? [String: String] ?? [:]
         self.partners = defaults.dictionary(forKey: Keys.partners) as? [String: String] ?? [:]
+        self.groupMembers = (defaults.dictionary(forKey: Keys.groupMembers) as? [String: [String]] ?? [:])
+            .mapValues(Set.init)
         self.profiles = defaults.data(forKey: Keys.profiles)
             .flatMap { try? JSONDecoder().decode([String: Profile].self, from: $0) } ?? [:]
         self.selection = defaults.string(forKey: Keys.selection)
@@ -111,9 +116,13 @@ public final class ChatStore {
         spaces.first { $0.name == name }
     }
 
-    /// Direct messages and unnamed group chats.
-    public var conversations: [Space] {
-        spaces.filter { $0.kind == .directMessage || $0.kind == .groupChat }
+    public var directMessages: [Space] {
+        spaces.filter { $0.kind == .directMessage }
+    }
+
+    /// Unnamed conversations between three or more people.
+    public var groupChats: [Space] {
+        spaces.filter { $0.kind == .groupChat }
     }
 
     public var namedSpaces: [Space] {
@@ -271,38 +280,17 @@ public final class ChatStore {
 
     // MARK: - People
 
-    /// Directory people who have no direct message in the conversation list yet.
-    public var peopleWithoutConversation: [Profile] {
-        let listed = Set(spaces.map(\.name))
-        let known = Set(partners.filter { listed.contains($0.key) }.values)
-        return directory.filter { !known.contains($0.user) }
-    }
-
-    /// Opens the direct message with a person, creating it when there is none.
-    public func startConversation(with person: Profile) async {
-        if let existing = partners.first(where: { $0.value == person.user })?.key,
-           space(named: existing) != nil {
-            selection = existing
-            return
-        }
+    /// Opens the conversation with the given people: a direct message for one
+    /// person, a group chat for several. An existing one is reused, otherwise
+    /// it is created.
+    public func startConversation(with people: [Profile]) async {
+        guard let first = people.first else { return }
         do {
-            var space: Space
-            if let found = try await chat.findDirectMessage(with: person.user) {
-                space = found
+            if people.count == 1 {
+                try await startDirectMessage(with: first)
             } else {
-                space = try await chat.createDirectMessage(with: person.user)
+                try await startGroupChat(with: people)
             }
-            profiles[person.user] = profiles[person.user] ?? person
-            partners[space.name] = person.user
-            defaults.set(partners, forKey: Keys.partners)
-            if let name = person.displayName ?? person.email { setTitle(name, for: space.name) }
-            if self.space(named: space.name) == nil {
-                // Listed first until it has real activity.
-                space.lastActiveTime = space.lastActiveTime ?? Date()
-                localSpaces[space.name] = space
-                spaces = Self.sorted(spaces + [space])
-            }
-            selection = space.name
         } catch let error as APIError where error.status == 403 {
             alertMessage = "Could not start the conversation: \(error.message)\n\n"
                 + "If this mentions scopes or permissions, add the chat.spaces.create scope "
@@ -311,6 +299,59 @@ public final class ChatStore {
             report(error)
             alertMessage = "Could not start the conversation: \(error.localizedDescription)"
         }
+    }
+
+    private func startDirectMessage(with person: Profile) async throws {
+        if let existing = partners.first(where: { $0.value == person.user })?.key,
+           space(named: existing) != nil {
+            selection = existing
+            return
+        }
+        let space: Space
+        if let found = try await chat.findDirectMessage(with: person.user) {
+            space = found
+        } else {
+            space = try await chat.createDirectMessage(with: person.user)
+        }
+        profiles[person.user] = profiles[person.user] ?? person
+        partners[space.name] = person.user
+        defaults.set(partners, forKey: Keys.partners)
+        if let name = person.displayName ?? person.email { setTitle(name, for: space.name) }
+        adopt(space)
+    }
+
+    private func startGroupChat(with people: [Profile]) async throws {
+        let users = Set(people.map(\.user))
+        if let existing = spaces.first(where: { $0.kind == .groupChat && groupMembers[$0.name] == users }) {
+            selection = existing.name
+            return
+        }
+        let space = try await chat.createGroupChat(with: users.sorted())
+        for person in people { profiles[person.user] = profiles[person.user] ?? person }
+        setGroupMembers(users, for: space.name)
+        setTitle(Self.groupTitle(people.compactMap { $0.displayName ?? $0.email }), for: space.name)
+        adopt(space)
+    }
+
+    /// Selects a conversation that was just found or created, adding it to the list if needed.
+    private func adopt(_ space: Space) {
+        if self.space(named: space.name) == nil {
+            var space = space
+            // Listed first until it has real activity.
+            space.lastActiveTime = space.lastActiveTime ?? Date()
+            localSpaces[space.name] = space
+            spaces = Self.sorted(spaces + [space])
+        }
+        selection = space.name
+    }
+
+    private func setGroupMembers(_ users: Set<String>, for name: String) {
+        groupMembers[name] = users
+        defaults.set(groupMembers.mapValues { $0.sorted() }, forKey: Keys.groupMembers)
+    }
+
+    private static func groupTitle(_ names: [String]) -> String {
+        names.map { $0.split(separator: " ").first.map(String.init) ?? $0 }.joined(separator: ", ")
     }
 
     private func loadDirectory() async {
@@ -576,14 +617,13 @@ public final class ChatStore {
             partners[space.name] = partner.name
             defaults.set(partners, forKey: Keys.partners)
         }
-        guard !names.isEmpty else { return }
-        if space.kind == .directMessage {
-            setTitle(names[0], for: space.name)
-        } else {
-            setTitle(
-                names.map { $0.split(separator: " ").first.map(String.init) ?? $0 }.joined(separator: ", "),
-                for: space.name)
+        // Remembered so that starting a chat with the same people reuses this one.
+        // A full page may be missing members, so those are not recorded.
+        if space.kind == .groupChat, members.count < 100 {
+            setGroupMembers(Set(others.map(\.name)), for: space.name)
         }
+        guard !names.isEmpty else { return }
+        setTitle(space.kind == .directMessage ? names[0] : Self.groupTitle(names), for: space.name)
     }
 
     private func setTitle(_ title: String, for name: String) {

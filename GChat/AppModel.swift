@@ -12,6 +12,7 @@ final class AppModel {
     private(set) var isSigningIn = false
     var signInError: String?
     var isQuickSwitcherShown = false
+    var isNewConversationShown = false
     var drafts: [String: String] = [:]
     var clientID: String {
         didSet { UserDefaults.standard.set(clientID, forKey: Self.clientIDKey) }

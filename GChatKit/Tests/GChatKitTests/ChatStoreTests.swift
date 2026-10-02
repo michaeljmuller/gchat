@@ -109,15 +109,36 @@ import Testing
         #expect(chat.markedRead == ["spaces/team", "spaces/team"])
     }
 
-    @Test func peopleListLeavesOutMeAndExistingConversations() async throws {
+    @Test func directoryLeavesOutMeAndExistingConversationsAreReused() async throws {
         let store = await makeStore()
-        #expect(await eventually { store.peopleWithoutConversation.map(\.user) == ["users/bob", "users/zed"] })
+        #expect(await eventually { store.directory.map(\.user) == ["users/ann", "users/bob", "users/zed"] })
+        let dm = try #require(store.space(named: "spaces/dm"))
+        #expect(await eventually { store.partner(of: dm) != nil })
 
         // Ann already has a direct message in the list, so it is selected, not created.
         let ann = try #require(store.directory.first { $0.user == "users/ann" })
-        await store.startConversation(with: ann)
+        await store.startConversation(with: [ann])
         #expect(store.selection == "spaces/dm")
         #expect(chat.update { $0.created }.isEmpty)
+    }
+
+    @Test func severalPeopleStartAGroupChatOnce() async throws {
+        let store = await makeStore()
+        #expect(await eventually { store.directory.count == 3 })
+        let people = store.directory.filter { $0.user != "users/ann" }
+
+        await store.startConversation(with: people)
+        #expect(chat.update { $0.created } == ["users/bob+users/zed"])
+        let space = try #require(store.space(named: "spaces/new-1"))
+        #expect(store.groupChats == [space])
+        #expect(store.title(for: space) == "Bob, Zed")
+        #expect(store.selection == "spaces/new-1")
+
+        // The same people again, in another order, reopen the same group chat.
+        store.selection = nil
+        await store.startConversation(with: people.reversed())
+        #expect(store.selection == "spaces/new-1")
+        #expect(chat.update { $0.created }.count == 1)
     }
 
     @Test func startingAConversationCreatesAndKeepsIt() async throws {
@@ -125,12 +146,11 @@ import Testing
         #expect(await eventually { store.directory.count == 3 })
         let bob = try #require(store.directory.first { $0.user == "users/bob" })
 
-        await store.startConversation(with: bob)
+        await store.startConversation(with: [bob])
         #expect(chat.update { $0.created } == ["users/bob"])
         #expect(store.selection == "spaces/new-1")
         let space = try #require(store.space(named: "spaces/new-1"))
         #expect(store.title(for: space) == "Bob Example")
-        #expect(!store.peopleWithoutConversation.contains(bob))
 
         // The server does not list a direct message without messages; it stays anyway.
         await store.refreshSpaces()
@@ -139,7 +159,7 @@ import Testing
         // An existing empty direct message is found, not created again.
         chat.update { $0.existingDMs["users/zed"] = Space(name: "spaces/zed-dm", spaceType: "DIRECT_MESSAGE") }
         let zed = try #require(store.directory.first { $0.user == "users/zed" })
-        await store.startConversation(with: zed)
+        await store.startConversation(with: [zed])
         #expect(store.selection == "spaces/zed-dm")
         #expect(chat.update { $0.created } == ["users/bob"])
     }

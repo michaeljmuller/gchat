@@ -76,8 +76,8 @@ match, search for it in the console's search bar at the top.
 
    Click Add to table, then Update, then Save.
 
-   What they are for: list your conversations, start a direct message with
-   someone, read and send messages, list members (to name direct messages),
+   What they are for: list your conversations, start a direct message or
+   group chat, read and send messages, list members (to name direct messages),
    read and set unread markers, list the organization's people with their
    names and photos, and identify you.
 
@@ -173,12 +173,13 @@ Tests for the non-UI code:
 
 ## Using it
 
-- Sidebar: direct messages and group chats first, then spaces, most recently
-  active on top. A dot and bold title mean unread. The search field filters.
-- People: everyone in the organization's directory that you have no direct
-  message with yet. Click a person to start one. Once the conversation has a
-  message it moves up to Direct Messages. Directories larger than 2000
-  people are cut off.
+- Sidebar: direct messages, group chats and spaces in separate sections,
+  most recently active on top. A dot and bold title mean unread. The search field filters.
+- Command-N starts a new conversation. Pick one person for a direct message
+  or several (Command-click or Shift-click) for a group chat, then click
+  Chat. Double-clicking a person starts a direct message straight away. If
+  a conversation with those people already exists, it is opened. The list
+  comes from the organization's directory and is cut off at 2000 people.
 - Return sends. Shift-Return or Option-Return starts a new line.
 - Command-K jumps to a conversation by name. Command-1 to Command-9 open the
   nine most recently active conversations. Command-R refreshes.
@@ -201,8 +202,8 @@ request is enough to see which conversations have something new.
 
 Not supported in this version: more than one account at a time, replying
 inside a thread (thread replies appear inline in the timeline), reactions,
-editing and deleting, inline images, uploading files, creating group chats
-and spaces, typing indicators and presence.
+editing and deleting, inline images, uploading files, creating named
+spaces, typing indicators and presence.
 
 Messages edited or deleted elsewhere do not change in an open transcript until
 the app is restarted, because polling only asks for newly created messages.

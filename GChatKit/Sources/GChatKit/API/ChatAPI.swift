@@ -13,6 +13,8 @@ public protocol ChatService: Sendable {
     func findDirectMessage(with user: String) async throws -> Space?
     /// Creates a direct message with a user, or returns the existing one.
     func createDirectMessage(with user: String) async throws -> Space
+    /// Creates an unnamed group chat with the given users and the signed-in user.
+    func createGroupChat(with users: [String]) async throws -> Space
 }
 
 public struct ChatAPI: ChatService {
@@ -94,17 +96,28 @@ public struct ChatAPI: ChatService {
     }
 
     public func createDirectMessage(with user: String) async throws -> Space {
+        try await setUpSpace(type: "DIRECT_MESSAGE", users: [user])
+    }
+
+    public func createGroupChat(with users: [String]) async throws -> Space {
+        try await setUpSpace(type: "GROUP_CHAT", users: users)
+    }
+
+    /// The signed-in user is added by the server and must not be listed.
+    private func setUpSpace(type: String, users: [String]) async throws -> Space {
         struct Setup: Encodable {
-            struct SpaceBody: Encodable { var spaceType = "DIRECT_MESSAGE" }
+            struct SpaceBody: Encodable { var spaceType: String }
             struct Member: Encodable {
                 var name: String
                 var type = "HUMAN"
             }
             struct MembershipBody: Encodable { var member: Member }
-            var space = SpaceBody()
+            var space: SpaceBody
             var memberships: [MembershipBody]
         }
-        let body = try JSONEncoder().encode(Setup(memberships: [.init(member: .init(name: user))]))
+        let body = try JSONEncoder().encode(Setup(
+            space: .init(spaceType: type),
+            memberships: users.map { .init(member: .init(name: $0)) }))
         return try await client.send("POST", url("spaces:setup"), body: body)
     }
 

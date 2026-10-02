@@ -133,6 +133,13 @@ final class FakeChat: ChatService, @unchecked Sendable {
             return Space(name: "spaces/new-\(state.created.count)", spaceType: "DIRECT_MESSAGE")
         }
     }
+
+    func createGroupChat(with users: [String]) async throws -> Space {
+        update { state in
+            state.created.append(users.joined(separator: "+"))
+            return Space(name: "spaces/new-\(state.created.count)", spaceType: "GROUP_CHAT")
+        }
+    }
 }
 
 struct FakePeople: ProfileService {

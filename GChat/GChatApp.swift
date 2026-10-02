@@ -27,6 +27,11 @@ struct AppCommands: Commands {
     let model: AppModel
 
     var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("New Conversation…") { model.isNewConversationShown = true }
+                .keyboardShortcut("n")
+                .disabled(model.store == nil)
+        }
         CommandMenu("Conversations") {
             Button("Jump to…") { model.isQuickSwitcherShown = true }
                 .keyboardShortcut("k")

@@ -20,6 +20,9 @@ struct MainView: View {
         .sheet(isPresented: $model.isQuickSwitcherShown) {
             QuickSwitcher(store: store)
         }
+        .sheet(isPresented: $model.isNewConversationShown) {
+            NewConversationSheet(store: store)
+        }
         .alert(
             "GChat",
             isPresented: Binding(
@@ -48,7 +51,7 @@ struct MainView: View {
         case .ready:
             ContentUnavailableView(
                 "No Conversation Selected", systemImage: "bubble.left.and.bubble.right",
-                description: Text("Choose a conversation from the sidebar, or press ⌘K to jump to one."))
+                description: Text("Choose a conversation from the sidebar, press ⌘K to jump to one, or ⌘N to start a new one."))
         }
     }
 }
@@ -59,9 +62,9 @@ struct SidebarView: View {
 
     var body: some View {
         List(selection: $store.selection) {
-            section("Direct Messages", filtered(store.conversations))
+            section("Direct Messages", filtered(store.directMessages))
+            section("Group Chats", filtered(store.groupChats))
             section("Spaces", filtered(store.namedSpaces))
-            peopleSection
         }
         .searchable(text: $search, placement: .sidebar, prompt: "Search")
         .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 400)
@@ -82,36 +85,6 @@ struct SidebarView: View {
     private func filtered(_ spaces: [Space]) -> [Space] {
         guard !search.isEmpty else { return spaces }
         return spaces.filter { store.title(for: $0).localizedCaseInsensitiveContains(search) }
-    }
-
-    /// People in the organization without a conversation yet. Clicking one starts it.
-    @ViewBuilder
-    private var peopleSection: some View {
-        let people = store.peopleWithoutConversation.filter {
-            search.isEmpty
-                || ($0.displayName ?? "").localizedCaseInsensitiveContains(search)
-                || ($0.email ?? "").localizedCaseInsensitiveContains(search)
-        }
-        if !people.isEmpty {
-            Section("People") {
-                ForEach(people, id: \.user) { person in
-                    let name = person.displayName ?? person.email ?? "Unknown"
-                    Button {
-                        Task { await store.startConversation(with: person) }
-                    } label: {
-                        HStack(spacing: 8) {
-                            AvatarView(url: person.photoURL, name: name, size: 22)
-                            Text(name).lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.vertical, 2)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(person.email ?? name)
-                }
-            }
-        }
     }
 
     @ViewBuilder
