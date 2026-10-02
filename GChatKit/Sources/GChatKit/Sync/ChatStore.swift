@@ -54,11 +54,8 @@ public final class ChatStore {
     public private(set) var isDirectoryBlocked = false
     /// A failure the user should see once, such as not being able to start a conversation.
     public var alertMessage: String?
-    public var selection: String? {
-        didSet {
-            if selection != oldValue { defaults.set(selection, forKey: Keys.selection) }
-        }
-    }
+    /// The open conversation. Not remembered between launches.
+    public var selection: String?
     public var isAppActive = true
     public var isOnline = true
 
@@ -92,7 +89,6 @@ public final class ChatStore {
     private let defaults: UserDefaults
 
     private enum Keys {
-        static let selection = "selectedSpace"
         static let titles = "spaceTitles"
         static let partners = "spacePartners"
         static let groupMembers = "groupMembers"
@@ -119,7 +115,6 @@ public final class ChatStore {
         self.missingUsers = Set(defaults.stringArray(forKey: Keys.missingUsers) ?? [])
         self.profiles = defaults.data(forKey: Keys.profiles)
             .flatMap { try? JSONDecoder().decode([String: Profile].self, from: $0) } ?? [:]
-        self.selection = defaults.string(forKey: Keys.selection)
     }
 
     /// The cached names, titles and members belong to one account. When another
