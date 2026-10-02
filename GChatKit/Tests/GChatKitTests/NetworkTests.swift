@@ -129,6 +129,18 @@ import Testing
         #expect(items.first { $0.name == "orderBy" }?.value == "createTime desc")
     }
 
+    @Test func attachmentsDownloadThroughTheMediaEndpoint() async throws {
+        let urls = Recorder<URL>()
+        StubProtocol.handler = { request in
+            urls.append(request.url!)
+            return (200, "file bytes")
+        }
+        let api = ChatAPI(client: APIClient(tokens: FixedToken(), session: StubProtocol.session()))
+        let data = try await api.downloadAttachment("ABC123")
+        #expect(String(decoding: data, as: UTF8.self) == "file bytes")
+        #expect(urls.values.first?.absoluteString == "https://chat.googleapis.com/v1/media/ABC123?alt=media")
+    }
+
     @Test func markReadPatchesReadState() async throws {
         let requests = Recorder<(String, String, String)>()
         StubProtocol.handler = { request in

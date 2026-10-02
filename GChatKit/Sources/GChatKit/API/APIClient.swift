@@ -31,6 +31,11 @@ public struct APIClient: Sendable {
     public func send<Response: Decodable>(
         _ method: String = "GET", _ url: URL, body: Data? = nil
     ) async throws -> Response {
+        try decoder.decode(Response.self, from: await data(method, url, body: body))
+    }
+
+    /// The undecoded response body.
+    public func data(_ method: String = "GET", _ url: URL, body: Data? = nil) async throws -> Data {
         var (data, status) = try await perform(method, url, body: body, forceRefresh: false)
         if status == 401 {
             (data, status) = try await perform(method, url, body: body, forceRefresh: true)
@@ -39,7 +44,7 @@ public struct APIClient: Sendable {
             let body = (try? JSONDecoder().decode(ErrorEnvelope.self, from: data))?.error
             throw APIError(status: status, message: body?.message ?? "HTTP \(status)", code: body?.status)
         }
-        return try decoder.decode(Response.self, from: data)
+        return data
     }
 
     private func perform(

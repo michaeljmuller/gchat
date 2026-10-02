@@ -499,6 +499,13 @@ public final class ChatStore {
         if isViewing(name) { await markRead(name) }
     }
 
+    /// Downloads a file that was uploaded to Chat. Returns nil for attachments
+    /// that live elsewhere, such as Google Drive files.
+    public func download(_ attachment: Attachment) async throws -> Data? {
+        guard let resource = attachment.attachmentDataRef?.resourceName else { return nil }
+        return try await chat.downloadAttachment(resource)
+    }
+
     public func loadOlder(in name: String) async {
         guard let transcript = transcripts[name], transcript.isLoaded, !transcript.isLoadingOlder,
               let token = transcript.olderPageToken

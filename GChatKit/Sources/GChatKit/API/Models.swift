@@ -59,11 +59,17 @@ public struct Attachment: Codable, Hashable, Sendable {
         public var driveFileId: String?
     }
 
+    public struct DataRef: Codable, Hashable, Sendable {
+        public var resourceName: String?
+    }
+
     public var name: String?
     public var contentName: String?
     public var contentType: String?
     public var downloadUri: String?
     public var driveDataRef: DriveDataRef?
+    /// Set for files uploaded to Chat. The file can then be downloaded through the API.
+    public var attachmentDataRef: DataRef?
 
     /// A link that opens the attachment in the browser.
     public var url: URL? {

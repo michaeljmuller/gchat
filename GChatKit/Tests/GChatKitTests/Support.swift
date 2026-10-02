@@ -134,6 +134,10 @@ final class FakeChat: ChatService, @unchecked Sendable {
         }
     }
 
+    func downloadAttachment(_ resourceName: String) async throws -> Data {
+        Data(resourceName.utf8)
+    }
+
     func createGroupChat(with users: [String]) async throws -> Space {
         update { state in
             state.created.append(users.joined(separator: "+"))

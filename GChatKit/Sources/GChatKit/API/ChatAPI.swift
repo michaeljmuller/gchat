@@ -15,6 +15,8 @@ public protocol ChatService: Sendable {
     func createDirectMessage(with user: String) async throws -> Space
     /// Creates an unnamed group chat with the given users and the signed-in user.
     func createGroupChat(with users: [String]) async throws -> Space
+    /// The contents of a file uploaded to Chat, by its attachment data reference.
+    func downloadAttachment(_ resourceName: String) async throws -> Data
 }
 
 public struct ChatAPI: ChatService {
@@ -119,6 +121,10 @@ public struct ChatAPI: ChatService {
             space: .init(spaceType: type),
             memberships: users.map { .init(member: .init(name: $0)) }))
         return try await client.send("POST", url("spaces:setup"), body: body)
+    }
+
+    public func downloadAttachment(_ resourceName: String) async throws -> Data {
+        try await client.data("GET", url("media/\(resourceName)", [URLQueryItem(name: "alt", value: "media")]))
     }
 
     public func readState(for space: String) async throws -> SpaceReadState {
