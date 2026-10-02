@@ -106,6 +106,26 @@ import Testing
         #expect(!store.isWithDeletedUser(space))
     }
 
+    @Test func cacheFromAnotherAccountIsDiscarded() async throws {
+        // Left behind by a different signed-in user.
+        defaults.set("users/someone-else", forKey: "cacheOwner")
+        defaults.set(["spaces/dm": "Old Title"], forKey: "spaceTitles")
+        defaults.set(["spaces/dm": "users/stranger"], forKey: "spacePartners")
+        defaults.set(
+            try JSONEncoder().encode(["users/stranger": Profile(user: "users/stranger", displayName: "Stranger")]),
+            forKey: "profiles")
+
+        let store = await makeStore()
+        let dm = try #require(store.space(named: "spaces/dm"))
+        #expect(await eventually { store.title(for: dm) == "Ann Example" })
+        #expect(store.profile(for: "users/stranger") == nil)
+        #expect(defaults.string(forKey: "cacheOwner") == "users/me-id")
+
+        // The same account again keeps its cache.
+        let again = ChatStore(chat: chat, people: FakePeople(), defaults: defaults)
+        #expect(again.title(for: dm) == "Ann Example")
+    }
+
     @Test func openingMarksRead() async throws {
         let store = await makeStore()
         #expect(await eventually { store.unreadCount == 1 })

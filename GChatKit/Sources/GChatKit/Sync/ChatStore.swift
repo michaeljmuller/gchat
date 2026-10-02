@@ -100,6 +100,7 @@ public final class ChatStore {
         static let groupMembers = "groupMembers"
         static let profiles = "profiles"
         static let missingUsers = "missingUsers"
+        static let cacheOwner = "cacheOwner"
     }
 
     private static let deletedName = "Deleted User"
@@ -121,6 +122,23 @@ public final class ChatStore {
         self.profiles = defaults.data(forKey: Keys.profiles)
             .flatMap { try? JSONDecoder().decode([String: Profile].self, from: $0) } ?? [:]
         self.selection = defaults.string(forKey: Keys.selection)
+    }
+
+    /// The cached names, titles and members belong to one account. When another
+    /// account signs in, they are discarded so that nothing from the previous
+    /// account shows up.
+    private func claimCache(for user: String) {
+        guard defaults.string(forKey: Keys.cacheOwner) != user else { return }
+        titles = [:]
+        partners = [:]
+        groupMembers = [:]
+        profiles = [:]
+        missingUsers = []
+        selection = nil
+        for key in [Keys.titles, Keys.partners, Keys.groupMembers, Keys.profiles, Keys.missingUsers] {
+            defaults.removeObject(forKey: key)
+        }
+        defaults.set(user, forKey: Keys.cacheOwner)
     }
 
     // MARK: - Reading state
@@ -271,7 +289,12 @@ public final class ChatStore {
     /// when that is unavailable, everyone already known from existing conversations.
     public var contacts: [Profile] {
         guard directoryError != nil else { return directory }
-        return profiles.values
+        var users: Set<String> = []
+        for space in spaces {
+            if let partner = partners[space.name] { users.insert(partner) }
+            users.formUnion(groupMembers[space.name] ?? [])
+        }
+        return users.compactMap { profiles[$0] }
             .filter { $0.displayName != nil && $0.user != me?.user && !missingUsers.contains($0.user) }
             .sorted {
                 ($0.displayName ?? "").localizedCaseInsensitiveCompare($1.displayName ?? "") == .orderedAscending
@@ -287,7 +310,11 @@ public final class ChatStore {
 
     func refreshSpaces() async {
         do {
-            if me == nil { me = try await people.me() }
+            if me == nil {
+                let me = try await people.me()
+                claimCache(for: me.user)
+                self.me = me
+            }
             var list = try await chat.listSpaces()
             connectionError = nil
             let listed = Set(list.map(\.name))
