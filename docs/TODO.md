@@ -285,6 +285,12 @@ What that allows on one shared client:
 So a few dozen colleagues are well within the limits. A few hundred need
 changes first.
 
+The organization has about 30 active employees. All 30 with the app
+frontmost use about 600 of the 3000 message reads per minute, so the items
+below are good practice, not blockers. The one case to avoid is everyone
+installing in the same few minutes: 30 first launches at once would exceed
+the membership reads. Stagger the rollout, or add the backoff first.
+
 To do:
 
 - The app does not back off when it gets 429; it keeps polling at the same
