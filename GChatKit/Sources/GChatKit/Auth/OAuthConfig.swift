@@ -33,6 +33,7 @@ public enum AuthError: Error, LocalizedError, Equatable {
 public struct OAuthConfig: Sendable, Equatable {
     public static let chatScopes = [
         "https://www.googleapis.com/auth/chat.spaces.readonly",
+        "https://www.googleapis.com/auth/chat.spaces.create",
         "https://www.googleapis.com/auth/chat.messages",
         "https://www.googleapis.com/auth/chat.memberships.readonly",
         "https://www.googleapis.com/auth/chat.users.readstate",

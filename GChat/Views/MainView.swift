@@ -20,6 +20,16 @@ struct MainView: View {
         .sheet(isPresented: $model.isQuickSwitcherShown) {
             QuickSwitcher(store: store)
         }
+        .alert(
+            "GChat",
+            isPresented: Binding(
+                get: { store.alertMessage != nil },
+                set: { if !$0 { store.alertMessage = nil } })
+        ) {
+            Button("OK") { store.alertMessage = nil }
+        } message: {
+            Text(store.alertMessage ?? "")
+        }
     }
 
     @ViewBuilder
@@ -51,6 +61,7 @@ struct SidebarView: View {
         List(selection: $store.selection) {
             section("Direct Messages", filtered(store.conversations))
             section("Spaces", filtered(store.namedSpaces))
+            peopleSection
         }
         .searchable(text: $search, placement: .sidebar, prompt: "Search")
         .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 400)
@@ -71,6 +82,36 @@ struct SidebarView: View {
     private func filtered(_ spaces: [Space]) -> [Space] {
         guard !search.isEmpty else { return spaces }
         return spaces.filter { store.title(for: $0).localizedCaseInsensitiveContains(search) }
+    }
+
+    /// People in the organization without a conversation yet. Clicking one starts it.
+    @ViewBuilder
+    private var peopleSection: some View {
+        let people = store.peopleWithoutConversation.filter {
+            search.isEmpty
+                || ($0.displayName ?? "").localizedCaseInsensitiveContains(search)
+                || ($0.email ?? "").localizedCaseInsensitiveContains(search)
+        }
+        if !people.isEmpty {
+            Section("People") {
+                ForEach(people, id: \.user) { person in
+                    let name = person.displayName ?? person.email ?? "Unknown"
+                    Button {
+                        Task { await store.startConversation(with: person) }
+                    } label: {
+                        HStack(spacing: 8) {
+                            AvatarView(url: person.photoURL, name: name, size: 22)
+                            Text(name).lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 2)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(person.email ?? name)
+                }
+            }
+        }
     }
 
     @ViewBuilder

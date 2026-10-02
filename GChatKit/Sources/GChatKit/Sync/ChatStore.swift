@@ -44,6 +44,10 @@ public final class ChatStore {
     public private(set) var spaces: [Space] = []
     public private(set) var me: Profile?
     public private(set) var connectionError: String?
+    /// The organization's directory without the signed-in user, sorted by name.
+    public private(set) var directory: [Profile] = []
+    /// A failure the user should see once, such as not being able to start a conversation.
+    public var alertMessage: String?
     public var selection: String? {
         didSet {
             if selection != oldValue { defaults.set(selection, forKey: Keys.selection) }
@@ -66,6 +70,9 @@ public final class ChatStore {
     /// Names taken from Chat responses, used until the People API answers.
     private var seedNames: [String: String] = [:]
 
+    /// Direct messages created here that have no messages yet. The server leaves
+    /// those out of the conversation list.
+    @ObservationIgnored private var localSpaces: [String: Space] = [:]
     @ObservationIgnored private var profileRequests: Set<String> = []
     @ObservationIgnored private var titleAttempts: Set<String> = []
     @ObservationIgnored private var pollTask: Task<Void, Never>?
@@ -192,6 +199,7 @@ public final class ChatStore {
     /// Reloads the conversation list and whatever is open. Used by the Refresh command.
     public func refresh() async {
         await refreshSpaces()
+        await loadDirectory()
         if let selection { await open(selection) }
     }
 
@@ -200,8 +208,11 @@ public final class ChatStore {
     func refreshSpaces() async {
         do {
             if me == nil { me = try await people.me() }
-            let list = try await chat.listSpaces()
+            var list = try await chat.listSpaces()
             connectionError = nil
+            let listed = Set(list.map(\.name))
+            localSpaces = localSpaces.filter { !listed.contains($0.key) }
+            list += localSpaces.values
 
             let isFirstLoad = phase != .ready
             let previous = spaces.reduce(into: [String: Date?]()) { $0[$1.name] = $1.lastActiveTime }
@@ -217,6 +228,7 @@ public final class ChatStore {
 
             if isFirstLoad {
                 Task { await self.loadReadStates() }
+                Task { await self.loadDirectory() }
             } else {
                 for space in spaces {
                     guard let active = space.lastActiveTime else { continue }
@@ -255,6 +267,60 @@ public final class ChatStore {
         else { return }
         spaces[index].lastActiveTime = time
         spaces = Self.sorted(spaces)
+    }
+
+    // MARK: - People
+
+    /// Directory people who have no direct message in the conversation list yet.
+    public var peopleWithoutConversation: [Profile] {
+        let listed = Set(spaces.map(\.name))
+        let known = Set(partners.filter { listed.contains($0.key) }.values)
+        return directory.filter { !known.contains($0.user) }
+    }
+
+    /// Opens the direct message with a person, creating it when there is none.
+    public func startConversation(with person: Profile) async {
+        if let existing = partners.first(where: { $0.value == person.user })?.key,
+           space(named: existing) != nil {
+            selection = existing
+            return
+        }
+        do {
+            var space: Space
+            if let found = try await chat.findDirectMessage(with: person.user) {
+                space = found
+            } else {
+                space = try await chat.createDirectMessage(with: person.user)
+            }
+            profiles[person.user] = profiles[person.user] ?? person
+            partners[space.name] = person.user
+            defaults.set(partners, forKey: Keys.partners)
+            if let name = person.displayName ?? person.email { setTitle(name, for: space.name) }
+            if self.space(named: space.name) == nil {
+                // Listed first until it has real activity.
+                space.lastActiveTime = space.lastActiveTime ?? Date()
+                localSpaces[space.name] = space
+                spaces = Self.sorted(spaces + [space])
+            }
+            selection = space.name
+        } catch let error as APIError where error.status == 403 {
+            alertMessage = "Could not start the conversation: \(error.message)\n\n"
+                + "If this mentions scopes or permissions, add the chat.spaces.create scope "
+                + "in the Google Cloud console (see the README), then sign out and sign in again."
+        } catch {
+            report(error)
+            alertMessage = "Could not start the conversation: \(error.localizedDescription)"
+        }
+    }
+
+    private func loadDirectory() async {
+        guard let people = try? await people.listDirectory() else { return }
+        directory = people
+            .filter { $0.user != me?.user }
+            .sorted {
+                ($0.displayName ?? $0.email ?? "").localizedCaseInsensitiveCompare($1.displayName ?? $1.email ?? "")
+                    == .orderedAscending
+            }
     }
 
     // MARK: - Messages

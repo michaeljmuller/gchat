@@ -9,6 +9,10 @@ public protocol ChatService: Sendable {
     func listMembers(of space: String) async throws -> [Membership]
     func readState(for space: String) async throws -> SpaceReadState
     func markRead(space: String, at time: Date) async throws
+    /// The existing direct message with a user ("users/123"), or nil when there is none.
+    func findDirectMessage(with user: String) async throws -> Space?
+    /// Creates a direct message with a user, or returns the existing one.
+    func createDirectMessage(with user: String) async throws -> Space
 }
 
 public struct ChatAPI: ChatService {
@@ -78,6 +82,30 @@ public struct ChatAPI: ChatService {
         let page: Page = try await client.send(
             "GET", url("\(space)/members", [URLQueryItem(name: "pageSize", value: "100")]))
         return page.memberships ?? []
+    }
+
+    public func findDirectMessage(with user: String) async throws -> Space? {
+        do {
+            return try await client.send(
+                "GET", url("spaces:findDirectMessage", [URLQueryItem(name: "name", value: user)]))
+        } catch let error as APIError where error.status == 404 {
+            return nil
+        }
+    }
+
+    public func createDirectMessage(with user: String) async throws -> Space {
+        struct Setup: Encodable {
+            struct SpaceBody: Encodable { var spaceType = "DIRECT_MESSAGE" }
+            struct Member: Encodable {
+                var name: String
+                var type = "HUMAN"
+            }
+            struct MembershipBody: Encodable { var member: Member }
+            var space = SpaceBody()
+            var memberships: [MembershipBody]
+        }
+        let body = try JSONEncoder().encode(Setup(memberships: [.init(member: .init(name: user))]))
+        return try await client.send("POST", url("spaces:setup"), body: body)
     }
 
     public func readState(for space: String) async throws -> SpaceReadState {

@@ -71,6 +71,9 @@ final class FakeChat: ChatService, @unchecked Sendable {
         var members: [String: [Membership]] = [:]
         var sendFails = false
         var markedRead: [String] = []
+        /// Direct messages that exist on the server but have no messages, keyed by user.
+        var existingDMs: [String: Space] = [:]
+        var created: [String] = []
     }
 
     private let lock = NSLock()
@@ -119,6 +122,17 @@ final class FakeChat: ChatService, @unchecked Sendable {
             $0.markedRead.append(space)
         }
     }
+
+    func findDirectMessage(with user: String) async throws -> Space? {
+        update { $0.existingDMs[user] }
+    }
+
+    func createDirectMessage(with user: String) async throws -> Space {
+        update { state in
+            state.created.append(user)
+            return Space(name: "spaces/new-\(state.created.count)", spaceType: "DIRECT_MESSAGE")
+        }
+    }
 }
 
 struct FakePeople: ProfileService {
@@ -128,6 +142,15 @@ struct FakePeople: ProfileService {
 
     func profile(for user: String) async throws -> Profile {
         Profile(user: user, displayName: user == "users/ann" ? "Ann Example" : "Someone Else")
+    }
+
+    func listDirectory() async throws -> [Profile] {
+        [
+            Profile(user: "users/zed", displayName: "Zed Example"),
+            Profile(user: "users/me-id", displayName: "Me"),
+            Profile(user: "users/bob", displayName: "Bob Example"),
+            Profile(user: "users/ann", displayName: "Ann Example"),
+        ]
     }
 }
 

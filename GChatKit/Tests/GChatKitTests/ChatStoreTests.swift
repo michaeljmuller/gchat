@@ -109,6 +109,41 @@ import Testing
         #expect(chat.markedRead == ["spaces/team", "spaces/team"])
     }
 
+    @Test func peopleListLeavesOutMeAndExistingConversations() async throws {
+        let store = await makeStore()
+        #expect(await eventually { store.peopleWithoutConversation.map(\.user) == ["users/bob", "users/zed"] })
+
+        // Ann already has a direct message in the list, so it is selected, not created.
+        let ann = try #require(store.directory.first { $0.user == "users/ann" })
+        await store.startConversation(with: ann)
+        #expect(store.selection == "spaces/dm")
+        #expect(chat.update { $0.created }.isEmpty)
+    }
+
+    @Test func startingAConversationCreatesAndKeepsIt() async throws {
+        let store = await makeStore()
+        #expect(await eventually { store.directory.count == 3 })
+        let bob = try #require(store.directory.first { $0.user == "users/bob" })
+
+        await store.startConversation(with: bob)
+        #expect(chat.update { $0.created } == ["users/bob"])
+        #expect(store.selection == "spaces/new-1")
+        let space = try #require(store.space(named: "spaces/new-1"))
+        #expect(store.title(for: space) == "Bob Example")
+        #expect(!store.peopleWithoutConversation.contains(bob))
+
+        // The server does not list a direct message without messages; it stays anyway.
+        await store.refreshSpaces()
+        #expect(store.space(named: "spaces/new-1") != nil)
+
+        // An existing empty direct message is found, not created again.
+        chat.update { $0.existingDMs["users/zed"] = Space(name: "spaces/zed-dm", spaceType: "DIRECT_MESSAGE") }
+        let zed = try #require(store.directory.first { $0.user == "users/zed" })
+        await store.startConversation(with: zed)
+        #expect(store.selection == "spaces/zed-dm")
+        #expect(chat.update { $0.created } == ["users/bob"])
+    }
+
     @Test func failedSendCanBeRetried() async throws {
         let store = await makeStore()
         store.selection = "spaces/team"
