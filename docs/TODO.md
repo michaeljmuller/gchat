@@ -337,3 +337,19 @@ To do:
 - Show that titles are still loading, so rows that read "Direct Message" or
   "Group Chat" for a while do not look like a bug.
 - Add a test with a fake service that counts requests per second.
+
+Batching, looked into October 2026:
+
+- Member lists cannot be batched. The Chat API lists members one
+  conversation at a time (spaces.members.list); there is no call that
+  returns members for several conversations, and the conversation list does
+  not include members. No batch endpoint for the Chat API was found in
+  Google's documentation. Where Google APIs do offer HTTP batching, each
+  inner request still counts against the quota, so it would save
+  connections, not quota.
+- People lookups can be batched. people.getBatchGet takes up to 200 people
+  per request. Replace the one-request-per-person lookups with it. This
+  helps most where the People API returns names (the family Workspace); at
+  work it returns none.
+- The bigger saving is to make fewer member-list calls at all: only for
+  conversations on screen, and never again once the members are cached.
