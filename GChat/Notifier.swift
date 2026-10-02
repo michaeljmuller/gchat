@@ -14,8 +14,30 @@ final class Notifier {
         UNUserNotificationCenter.current().delegate = delegate
     }
 
-    func requestAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    /// Asks once; macOS remembers the answer. Calls back with whether
+    /// notifications are allowed.
+    func requestAuthorization(then update: @escaping @MainActor (Bool) -> Void) {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            Task { @MainActor in update(granted) }
+        }
+    }
+
+    /// Whether macOS currently lets the app show notifications. Checked again
+    /// when the app becomes active, since the user may have changed it in
+    /// System Settings.
+    func checkAuthorization(then update: @escaping @MainActor (Bool) -> Void) {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let allowed = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+            Task { @MainActor in update(allowed) }
+        }
+    }
+
+    /// Opens GChat's page in System Settings > Notifications.
+    static func openSystemSettings() {
+        let id = Bundle.main.bundleIdentifier ?? ""
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     func post(space: String, title: String, subtitle: String?, body: String) {

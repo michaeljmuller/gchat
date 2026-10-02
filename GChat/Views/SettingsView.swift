@@ -73,6 +73,15 @@ struct SettingsView: View {
                 Toggle("Notify me about new messages", isOn: $notificationsEnabled)
                 Toggle("Show message text in notifications", isOn: $notificationPreviews)
                     .disabled(!notificationsEnabled)
+                if notificationsEnabled, !model.notificationsAllowed {
+                    LabeledContent {
+                        Button("Open System Settings") { Notifier.openSystemSettings() }
+                    } label: {
+                        Label("Notifications are turned off for GChat in System Settings.",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
         }
         .formStyle(.grouped)

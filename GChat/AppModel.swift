@@ -13,6 +13,8 @@ final class AppModel {
     var signInError: String?
     var isQuickSwitcherShown = false
     var isNewConversationShown = false
+    /// False when macOS has notifications turned off for GChat.
+    private(set) var notificationsAllowed = true
     var drafts: [String: String] = [:]
     var clientID: String {
         didSet { UserDefaults.standard.set(clientID, forKey: Self.clientIDKey) }
@@ -84,7 +86,7 @@ final class AppModel {
         }
         self.auth = auth
         self.store = store
-        notifier.requestAuthorization()
+        notifier.requestAuthorization { [weak self] allowed in self?.notificationsAllowed = allowed }
         store.start()
     }
 
@@ -137,6 +139,9 @@ final class AppModel {
     }
 
     private func setActive(_ isActive: Bool) {
+        if isActive {
+            notifier.checkAuthorization { [weak self] allowed in self?.notificationsAllowed = allowed }
+        }
         guard let store else { return }
         store.isAppActive = isActive
         // Coming back to the app with a conversation open counts as reading it.
