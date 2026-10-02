@@ -67,7 +67,7 @@ public final class ChatStore {
     /// Direct message space -> the other person's user resource name.
     private var partners: [String: String]
     /// Group chat space -> the other members' user resource names.
-    @ObservationIgnored private var groupMembers: [String: Set<String>]
+    private var groupMembers: [String: Set<String>]
     private var profiles: [String: Profile]
     /// Names taken from Chat responses, used until the People API answers.
     private var seedNames: [String: String] = [:]
@@ -131,12 +131,28 @@ public final class ChatStore {
 
     public func title(for space: Space) -> String {
         if let name = space.displayName, !name.isEmpty { return name }
-        if let title = titles[space.name] { return title }
+        if let title = currentTitle(for: space) ?? titles[space.name] { return title }
         if space.singleUserBotDm == true { return "App" }
         switch space.kind {
         case .directMessage: return "Direct Message"
         case .groupChat: return "Group Chat"
         default: return "Space"
+        }
+    }
+
+    /// A title built from the members' current names. The stored title is only
+    /// a fallback, because people can be renamed.
+    private func currentTitle(for space: Space) -> String? {
+        switch space.kind {
+        case .directMessage:
+            return partners[space.name].flatMap { profiles[$0]?.displayName }
+        case .groupChat:
+            guard let members = groupMembers[space.name], !members.isEmpty else { return nil }
+            let names = members.compactMap { profiles[$0]?.displayName }
+            guard names.count == members.count else { return nil }
+            return Self.groupTitle(Array(names.sorted().prefix(8)))
+        default:
+            return nil
         }
     }
 
@@ -355,7 +371,14 @@ public final class ChatStore {
     }
 
     private func loadDirectory() async {
-        guard let people = try? await people.listDirectory() else { return }
+        guard let people = try? await people.listDirectory() else {
+            await refreshTitleProfiles()
+            return
+        }
+        // The directory is current, so it also refreshes cached names and photos.
+        for person in people { profileRequests.insert(person.user) }
+        store(people)
+        await refreshTitleProfiles()
         directory = people
             .filter { $0.user != me?.user }
             .sorted {
@@ -565,17 +588,36 @@ public final class ChatStore {
     }
 
     private func requestProfile(_ user: String) {
-        guard profiles[user] == nil, !profileRequests.contains(user) else { return }
+        // Once per launch, even when cached, so that renames are picked up.
+        guard !profileRequests.contains(user) else { return }
         profileRequests.insert(user)
         Task {
-            if let profile = try? await people.profile(for: user) { store(profile) }
+            if let profile = try? await people.profile(for: user) { store([profile]) }
         }
     }
 
-    private func store(_ profile: Profile) {
-        profiles[profile.user] = profile
+    private func store(_ updates: [Profile]) {
+        for var profile in updates {
+            // A lookup that returns no name does not erase a known one.
+            profile.displayName = profile.displayName ?? profiles[profile.user]?.displayName
+            profiles[profile.user] = profile
+        }
         if let data = try? JSONEncoder().encode(profiles) {
             defaults.set(data, forKey: Keys.profiles)
+        }
+    }
+
+    /// Looks up the people that conversation titles are built from, most
+    /// recent conversations first, skipping anyone already looked up.
+    private func refreshTitleProfiles() async {
+        var users: [String] = []
+        for space in spaces.prefix(100) {
+            if let partner = partners[space.name] { users.append(partner) }
+            users += (groupMembers[space.name] ?? []).sorted()
+        }
+        let pending = users.filter { profileRequests.insert($0).inserted }
+        await forEachLimited(pending) { user in
+            if let profile = try? await self.people.profile(for: user) { self.store([profile]) }
         }
     }
 
@@ -611,7 +653,8 @@ public final class ChatStore {
             } else if let name = profiles[user.name]?.displayName {
                 names.append(name)
             } else if let profile = try? await people.profile(for: user.name) {
-                store(profile)
+                profileRequests.insert(user.name)
+                store([profile])
                 if let name = profile.displayName { names.append(name) }
             }
         }

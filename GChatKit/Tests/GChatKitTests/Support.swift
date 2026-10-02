@@ -143,12 +143,14 @@ final class FakeChat: ChatService, @unchecked Sendable {
 }
 
 struct FakePeople: ProfileService {
+    var annName = "Ann Example"
+
     func me() async throws -> Profile {
         Profile(user: "users/me-id", displayName: "Me")
     }
 
     func profile(for user: String) async throws -> Profile {
-        Profile(user: user, displayName: user == "users/ann" ? "Ann Example" : "Someone Else")
+        Profile(user: user, displayName: user == "users/ann" ? annName : "Someone Else")
     }
 
     func listDirectory() async throws -> [Profile] {
@@ -156,7 +158,7 @@ struct FakePeople: ProfileService {
             Profile(user: "users/zed", displayName: "Zed Example"),
             Profile(user: "users/me-id", displayName: "Me"),
             Profile(user: "users/bob", displayName: "Bob Example"),
-            Profile(user: "users/ann", displayName: "Ann Example"),
+            Profile(user: "users/ann", displayName: annName),
         ]
     }
 }

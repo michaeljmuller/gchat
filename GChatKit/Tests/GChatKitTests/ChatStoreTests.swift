@@ -51,6 +51,18 @@ import Testing
         #expect(store.isUnread(try #require(store.space(named: "spaces/team"))))
     }
 
+    @Test func titlesFollowRenamesOnTheNextLaunch() async throws {
+        let first = await makeStore()
+        let dm = try #require(first.space(named: "spaces/dm"))
+        #expect(await eventually { first.title(for: dm) == "Ann Example" })
+
+        // A new launch with the same stored data, after Ann was renamed.
+        let second = ChatStore(chat: chat, people: FakePeople(annName: "Ann Renamed"), defaults: defaults)
+        #expect(second.title(for: dm) == "Ann Example")
+        await second.refreshSpaces()
+        #expect(await eventually { second.title(for: dm) == "Ann Renamed" })
+    }
+
     @Test func openingMarksRead() async throws {
         let store = await makeStore()
         #expect(await eventually { store.unreadCount == 1 })
