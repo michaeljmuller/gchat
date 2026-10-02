@@ -749,13 +749,21 @@ public final class ChatStore {
     /// Direct messages and group chats have no name of their own; build one from the members.
     private func resolveTitles() async {
         let untitled = spaces.filter {
-            // Group chats are also looked up when their members are not recorded yet.
             ($0.displayName ?? "").isEmpty && !titleAttempts.contains($0.name)
-                && (titles[$0.name] == nil || ($0.kind == .groupChat && groupMembers[$0.name] == nil))
+                && (titles[$0.name] == nil || needsMemberNames($0))
         }
         guard !untitled.isEmpty else { return }
         for space in untitled { titleAttempts.insert(space.name) }
         await forEachLimited(untitled) { await self.resolveTitle($0) }
+    }
+
+    /// True when a titled conversation still lacks its members or their names,
+    /// which the New Conversation list and live titles are built from.
+    private func needsMemberNames(_ space: Space) -> Bool {
+        guard space.kind == .directMessage || space.kind == .groupChat, space.singleUserBotDm != true,
+              titles[space.name] != Self.deletedName
+        else { return false }
+        return currentTitle(for: space) == nil
     }
 
     private func resolveTitle(_ space: Space) async {
@@ -792,6 +800,9 @@ public final class ChatStore {
             // Only the signed-in user is left in the conversation.
             setTitle(Self.deletedName, for: space.name)
             return
+        }
+        for user in others {
+            if let name = user.displayName { noteName(name, for: user.name) }
         }
         var names: [String] = []
         for user in others.prefix(8) {
