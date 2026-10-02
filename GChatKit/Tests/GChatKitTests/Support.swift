@@ -144,6 +144,8 @@ final class FakeChat: ChatService, @unchecked Sendable {
 
 struct FakePeople: ProfileService {
     var annName = "Ann Example"
+    /// Simulates an organization where the People API returns no names for other users.
+    var hidesNames = false
 
     func me() async throws -> Profile {
         Profile(user: "users/me-id", displayName: "Me")
@@ -151,11 +153,13 @@ struct FakePeople: ProfileService {
 
     func profile(for user: String) async throws -> Profile {
         if user == "users/gone" { throw APIError(status: 404, message: "Not found", code: "NOT_FOUND") }
+        if hidesNames { return Profile(user: user) }
         return Profile(user: user, displayName: user == "users/ann" ? annName : "Someone Else")
     }
 
     func listDirectory() async throws -> [Profile] {
-        [
+        if hidesNames { throw APIError(status: 403, message: "Directory sharing disabled", code: "PERMISSION_DENIED") }
+        return [
             Profile(user: "users/zed", displayName: "Zed Example"),
             Profile(user: "users/me-id", displayName: "Me"),
             Profile(user: "users/bob", displayName: "Bob Example"),

@@ -126,6 +126,25 @@ import Testing
         #expect(again.title(for: dm) == "Ann Example")
     }
 
+    @Test func namesFromChatAreUsedWhenPeopleLookupsReturnNone() async throws {
+        chat.update { state in
+            state.spaces = [Space(name: "spaces/dm", spaceType: "DIRECT_MESSAGE", lastActiveTime: now)]
+            state.members["spaces/dm"] = [
+                Membership(member: User(name: "users/me-id", type: "HUMAN")),
+                Membership(member: User(name: "users/cy", displayName: "Cy Example", type: "HUMAN")),
+            ]
+        }
+        let store = ChatStore(chat: chat, people: FakePeople(hidesNames: true), defaults: defaults)
+        await store.refreshSpaces()
+        let dm = try #require(store.space(named: "spaces/dm"))
+
+        #expect(await eventually { store.title(for: dm) == "Cy Example" })
+        #expect(await eventually { store.isDirectoryBlocked })
+        // The fallback list for new conversations has the person, with the name from Chat.
+        #expect(await eventually { store.contacts.map(\.displayName) == ["Cy Example"] })
+        #expect(store.name(for: User(name: "users/cy", type: "HUMAN")) == "Cy Example")
+    }
+
     @Test func openingMarksRead() async throws {
         let store = await makeStore()
         #expect(await eventually { store.unreadCount == 1 })

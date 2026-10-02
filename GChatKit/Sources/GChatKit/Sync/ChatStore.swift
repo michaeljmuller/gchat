@@ -77,8 +77,6 @@ public final class ChatStore {
     private var profiles: [String: Profile]
     /// Users the People API reports as not found, which is how deleted accounts appear.
     private var missingUsers: Set<String>
-    /// Names taken from Chat responses, used until the People API answers.
-    private var seedNames: [String: String] = [:]
 
     /// Direct messages created here that have no messages yet. The server leaves
     /// those out of the conversation list.
@@ -236,7 +234,7 @@ public final class ChatStore {
 
     public func name(for user: User?) -> String {
         guard let user else { return "Unknown" }
-        if let name = profiles[user.name]?.displayName ?? seedNames[user.name] ?? user.displayName,
+        if let name = profiles[user.name]?.displayName ?? user.displayName,
            !name.isEmpty {
             return name
         }
@@ -676,9 +674,7 @@ public final class ChatStore {
 
     private func resolveProfiles(in messages: [Message]) {
         for sender in Set(messages.compactMap(\.sender)) where !sender.isBot {
-            if let name = sender.displayName, !name.isEmpty, seedNames[sender.name] == nil {
-                seedNames[sender.name] = name
-            }
+            if let name = sender.displayName { noteName(name, for: sender.name) }
             requestProfile(sender.name)
         }
     }
@@ -714,10 +710,23 @@ public final class ChatStore {
         defaults.set(missingUsers.sorted(), forKey: Keys.missingUsers)
     }
 
+    /// Records a name that came with a Chat response. Some organizations do not
+    /// let the People API return names for other users, so this is then the
+    /// only source.
+    private func noteName(_ name: String, for user: String) {
+        guard !name.isEmpty, profiles[user]?.displayName != name else { return }
+        var profile = profiles[user] ?? Profile(user: user)
+        profile.displayName = name
+        store([profile])
+    }
+
     private func store(_ updates: [Profile]) {
         for var profile in updates {
-            // A lookup that returns no name does not erase a known one.
-            profile.displayName = profile.displayName ?? profiles[profile.user]?.displayName
+            // A lookup that returns less than is already known does not erase it.
+            let known = profiles[profile.user]
+            profile.displayName = profile.displayName ?? known?.displayName
+            profile.photoURL = profile.photoURL ?? known?.photoURL
+            profile.email = profile.email ?? known?.email
             profiles[profile.user] = profile
         }
         if let data = try? JSONEncoder().encode(profiles) {
@@ -787,7 +796,7 @@ public final class ChatStore {
         var names: [String] = []
         for user in others.prefix(8) {
             if let name = user.displayName, !name.isEmpty {
-                seedNames[user.name] = name
+                noteName(name, for: user.name)
                 names.append(name)
                 requestProfile(user.name)
             } else if let name = profiles[user.name]?.displayName {
