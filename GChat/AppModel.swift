@@ -145,9 +145,30 @@ final class AppModel {
     }
 }
 
+enum SidebarSort: String, CaseIterable, Identifiable {
+    case recent
+    case alphabetical
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .recent: "Most recent first"
+        case .alphabetical: "Alphabetically"
+        }
+    }
+}
+
 enum AppSettings {
     static let notificationsKey = "notificationsEnabled"
     static let previewsKey = "notificationPreviews"
+    static let hideDeletedKey = "hideDeletedUserConversations"
+    static let showDatesKey = "showSidebarDates"
+    static let sidebarSortKey = "sidebarSort"
+
+    static var hideDeletedUsers: Bool {
+        UserDefaults.standard.object(forKey: hideDeletedKey) as? Bool ?? true
+    }
 
     static var notificationsEnabled: Bool {
         UserDefaults.standard.object(forKey: notificationsKey) as? Bool ?? true

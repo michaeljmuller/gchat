@@ -59,6 +59,9 @@ struct MainView: View {
 struct SidebarView: View {
     @Bindable var store: ChatStore
     @State private var search = ""
+    @AppStorage(AppSettings.hideDeletedKey) private var hideDeletedUsers = true
+    @AppStorage(AppSettings.showDatesKey) private var showDates = true
+    @AppStorage(AppSettings.sidebarSortKey) private var sidebarSort = SidebarSort.recent
 
     var body: some View {
         List(selection: $store.selection) {
@@ -82,9 +85,21 @@ struct SidebarView: View {
         }
     }
 
+    /// Applies the search field and the sidebar settings. The store's order is most recent first.
     private func filtered(_ spaces: [Space]) -> [Space] {
-        guard !search.isEmpty else { return spaces }
-        return spaces.filter { store.title(for: $0).localizedCaseInsensitiveContains(search) }
+        var spaces = spaces
+        if hideDeletedUsers {
+            spaces.removeAll { store.isWithDeletedUser($0) }
+        }
+        if !search.isEmpty {
+            spaces = spaces.filter { store.title(for: $0).localizedCaseInsensitiveContains(search) }
+        }
+        if sidebarSort == .alphabetical {
+            spaces.sort {
+                store.title(for: $0).localizedStandardCompare(store.title(for: $1)) == .orderedAscending
+            }
+        }
+        return spaces
     }
 
     @ViewBuilder
@@ -92,7 +107,7 @@ struct SidebarView: View {
         if !spaces.isEmpty {
             Section(title) {
                 ForEach(spaces) { space in
-                    SpaceRow(store: store, space: space)
+                    SpaceRow(store: store, space: space, showsDate: showDates)
                         .tag(space.name)
                 }
             }
@@ -103,6 +118,7 @@ struct SidebarView: View {
 struct SpaceRow: View {
     let store: ChatStore
     let space: Space
+    var showsDate = false
 
     var body: some View {
         let title = store.title(for: space)
@@ -113,6 +129,15 @@ struct SpaceRow: View {
                 .fontWeight(isUnread ? .semibold : .regular)
                 .lineLimit(1)
             Spacer(minLength: 4)
+            if showsDate, let date = space.lastActiveTime {
+                Text(Self.shortDate(date))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                    .help(date.formatted(date: .long, time: .shortened))
+            }
             if isUnread {
                 Circle()
                     .fill(.tint)
@@ -121,6 +146,24 @@ struct SpaceRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    /// Time for today, weekday within the last week, otherwise the date.
+    static func shortDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return date.formatted(date: .omitted, time: .shortened)
+        }
+        if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        }
+        if let days = calendar.dateComponents([.day], from: date, to: Date()).day, days < 7 {
+            return date.formatted(.dateTime.weekday(.wide))
+        }
+        if calendar.isDate(date, equalTo: Date(), toGranularity: .year) {
+            return date.formatted(.dateTime.month(.abbreviated).day())
+        }
+        return date.formatted(date: .numeric, time: .omitted)
     }
 
     @ViewBuilder

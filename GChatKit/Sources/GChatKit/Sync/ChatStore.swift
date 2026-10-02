@@ -168,6 +168,13 @@ public final class ChatStore {
         profiles[user]?.displayName ?? (missingUsers.contains(user) ? Self.deletedName : nil)
     }
 
+    /// True for a direct message whose other member's account no longer exists.
+    public func isWithDeletedUser(_ space: Space) -> Bool {
+        guard space.kind == .directMessage, space.singleUserBotDm != true else { return false }
+        if let partner = partners[space.name] { return missingUsers.contains(partner) }
+        return titles[space.name] == Self.deletedName
+    }
+
     /// The other person in a direct message, when known.
     public func partner(of space: Space) -> Profile? {
         partners[space.name].flatMap { profiles[$0] }

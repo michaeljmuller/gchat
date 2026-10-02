@@ -44,7 +44,8 @@ struct AppCommands: Commands {
 
             if let store = model.store {
                 Divider()
-                ForEach(Array(store.spaces.prefix(9).enumerated()), id: \.element.id) { index, space in
+                let recent = store.spaces.filter { !(AppSettings.hideDeletedUsers && store.isWithDeletedUser($0)) }
+                ForEach(Array(recent.prefix(9).enumerated()), id: \.element.id) { index, space in
                     Button(store.title(for: space)) { store.selection = space.name }
                         .keyboardShortcut(KeyEquivalent(Character(String(index + 1))))
                 }

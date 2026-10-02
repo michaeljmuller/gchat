@@ -186,8 +186,11 @@ Tests for the non-UI code:
 - Scroll to the top of a conversation to load earlier messages.
 - Notifications arrive for messages in conversations you are not looking at.
   Clicking one opens that conversation. The Dock badge counts unread
-  conversations. Settings (Command-comma) has the notification options and
-  Sign Out.
+  conversations.
+- Settings (Command-comma): sort the sidebar by most recent activity or
+  alphabetically, show or hide the date of last activity next to each
+  conversation, hide direct messages with deleted users (hidden by default),
+  the notification options, and Sign Out.
 - Reading a conversation here marks it read in Google Chat on your other
   devices, and the other way round.
 
