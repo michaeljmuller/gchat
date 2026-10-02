@@ -296,11 +296,44 @@ To do:
 - The app does not back off when it gets 429; it keeps polling at the same
   rate. Add exponential backoff and show a "slowed down" state. Do this
   before sharing the client with anyone.
-- Spread the first-launch membership reads out, and do not repeat them on
-  every launch for large group chats.
+- Throttle the first-launch load. See "Throttle the initial conversation
+  load" below.
 - Poll less often: slow the open conversation to 5 to 10 seconds, stop
   polling after some minutes without user activity, and stop when the
   window is closed or the screen is locked.
 - Push delivery (first item in this file) removes most reads.
 - Not found in Google's table: which quota the read-marker calls count
   against. Check in the Cloud console's quota page under real use.
+
+
+## Throttle the initial conversation load
+
+On a first launch, after signing in to a different account, or when names
+are missing, the app reads the member list of every direct message and group
+chat to build titles, and the read marker of every conversation active in
+the last 90 days. It runs four requests at a time with no delay between
+them, so an account with 200 conversations sends a few hundred requests in
+the first seconds. See resolveTitles(), loadReadStates() and
+forEachLimited() in GChatKit/Sources/GChatKit/Sync/ChatStore.swift.
+
+Membership reads are limited to 3000 per minute for the whole Cloud project,
+so many people doing this in the same minute would exceed it.
+
+To do:
+
+- Rate-limit the startup requests to a fixed budget, for example 2 to 5 per
+  second per copy of the app, instead of as fast as four connections allow.
+- Order the work so what is on screen comes first: the selected tab's
+  conversations, most recently active first, then the rest in the
+  background.
+- Load lazily where possible: resolve a conversation's members when its row
+  first becomes visible, not for the whole list up front.
+- On a 429 answer, pause the whole queue with exponential backoff and
+  resume; do not drop the item. Today a failed lookup is not retried until
+  the next launch.
+- Do not repeat the work on later launches. Group chats with more than
+  eight members are currently looked up again at every launch when the
+  People API gives no names.
+- Show that titles are still loading, so rows that read "Direct Message" or
+  "Group Chat" for a while do not look like a bug.
+- Add a test with a fake service that counts requests per second.
