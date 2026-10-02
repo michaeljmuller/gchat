@@ -173,8 +173,9 @@ Tests for the non-UI code:
 
 ## Using it
 
-- Sidebar: direct messages, group chats, spaces and meeting chats in
-  separate sections, most recently active on top. Meeting chats are the ones
+- Sidebar: tabs for direct messages, group chats, spaces and meeting chats,
+  most recently active on top. A dot on a tab means it has unread
+  conversations. Searching looks through all four. Meeting chats are the ones
   Google Meet creates for calendar events; Google does not label them, so
   the app treats a named space without threading as a meeting chat. A dot and bold title mean unread. The search field filters.
 - Command-N starts a new conversation. Pick one person for a direct message

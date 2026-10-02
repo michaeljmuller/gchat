@@ -64,6 +64,7 @@ struct SidebarView: View {
     @AppStorage(AppSettings.hideAppsKey) private var hideApps = false
     @AppStorage(AppSettings.showDatesKey) private var showDates = true
     @AppStorage(AppSettings.sidebarSortKey) private var sidebarSort = SidebarSort.recent
+    @AppStorage("sidebarTab") private var selectedTab = "Direct Messages"
 
     private struct SidebarSection: Identifiable {
         let title: String
@@ -91,23 +92,33 @@ struct SidebarView: View {
         ].filter { !$0.spaces.isEmpty }
     }
 
+    /// The section shown when not searching. Falls back to the first one that has conversations.
+    private func current(_ sections: [SidebarSection]) -> SidebarSection? {
+        sections.first { $0.title == selectedTab } ?? sections.first
+    }
+
     var body: some View {
         let sections = sections
-        ScrollViewReader { proxy in
-            List(selection: $store.selection) {
-                ForEach(sections) { section in
-                    Section(section.title) {
-                        ForEach(section.spaces) { space in
-                            SpaceRow(store: store, space: space, showsDate: showDates)
-                                .tag(space.name)
-                        }
-                    }
+        // A search looks through every section; otherwise one tab is shown at a time.
+        let visible = search.isEmpty ? Array([current(sections)].compactMap { $0 }) : sections
+        List(selection: $store.selection) {
+            ForEach(visible) { section in
+                if search.isEmpty {
+                    rows(section)
+                } else {
+                    Section(section.title) { rows(section) }
                 }
             }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if sections.count > 1 {
-                    jumpBar(sections, proxy)
-                }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if search.isEmpty, sections.count > 1 {
+                tabBar(sections)
+            }
+        }
+        .onChange(of: store.selection) {
+            // Follow a conversation opened from elsewhere, such as ⌘K or a notification.
+            if let tab = sections.first(where: { $0.spaces.contains { $0.name == store.selection } }) {
+                selectedTab = tab.title
             }
         }
         .searchable(text: $search, placement: .sidebar, prompt: "Search")
@@ -148,41 +159,55 @@ struct SidebarView: View {
         return spaces
     }
 
-    /// Always-visible section names. Clicking one scrolls the list to that section.
-    private func jumpBar(_ sections: [SidebarSection], _ proxy: ScrollViewProxy) -> some View {
-        ViewThatFits(in: .horizontal) {
-            jumpButtons(sections, proxy, showsText: true)
-            jumpButtons(sections, proxy, showsText: false)
+    private func rows(_ section: SidebarSection) -> some View {
+        ForEach(section.spaces) { space in
+            SpaceRow(store: store, space: space, showsDate: showDates)
+                .tag(space.name)
         }
-        .padding(.horizontal, 10)
+    }
+
+    /// One tab per section. A dot marks a tab that has unread conversations.
+    private func tabBar(_ sections: [SidebarSection]) -> some View {
+        ViewThatFits(in: .horizontal) {
+            tabButtons(sections, showsText: true)
+            tabButtons(sections, showsText: false)
+        }
+        .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity)
         .background(.bar)
         .overlay(alignment: .bottom) { Divider() }
     }
 
-    private func jumpButtons(
-        _ sections: [SidebarSection], _ proxy: ScrollViewProxy, showsText: Bool
-    ) -> some View {
-        HStack(spacing: 4) {
+    private func tabButtons(_ sections: [SidebarSection], showsText: Bool) -> some View {
+        let selected = current(sections)?.id
+        return HStack(spacing: 2) {
             ForEach(sections) { section in
+                let isSelected = section.id == selected
                 Button {
-                    guard let first = section.spaces.first else { return }
-                    withAnimation { proxy.scrollTo(first.id, anchor: .top) }
+                    selectedTab = section.title
                 } label: {
                     HStack(spacing: 3) {
                         Image(systemName: section.icon)
                         if showsText { Text(section.shortTitle).fixedSize() }
+                        if section.spaces.contains(where: { store.isUnread($0) }) {
+                            Circle().fill(.tint).frame(width: 6, height: 6)
+                        }
                     }
                     .font(.caption.weight(.medium))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        isSelected ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear),
+                        in: RoundedRectangle(cornerRadius: 6))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .help("Scroll to \(section.title)")
-                if section.id != sections.last?.id { Spacer(minLength: 0) }
+                .foregroundStyle(isSelected ? .primary : .secondary)
+                .help(section.title)
+                .accessibilityLabel(section.title)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
     }
