@@ -241,8 +241,8 @@ Google side:
   API controls), the client may need approving before colleagues can sign
   in. See docs/directory-sharing-request.md for the directory setting,
   which also decides whether New Conversation lists everyone.
-- Chat API quota is per Cloud project. Check the per-project limits against
-  the number of colleagues, since every copy polls every few seconds.
+- Chat API quota is shared by everyone using the same Cloud project. See
+  "Quota when many people use one client" below.
 
 Before handing it out:
 
@@ -252,3 +252,49 @@ Before handing it out:
   Keychain, names in preferences, no messages on disk), known limits, who to
   ask, and that it is not a Google product.
 - Clear the plan with whoever owns IT or security at work.
+
+
+## Quota when many people use one client
+
+Google's limits (https://developers.google.com/workspace/chat/limits, read
+October 2026). Per Cloud project, per minute: 3000 message reads, 3000 space
+reads, 3000 membership reads, 3000 message writes, 60 space writes (creating
+conversations). Per space, per second, shared by all apps: 15 reads, 1
+write. Over the limit, Google answers 429 and recommends exponential
+backoff. A per-project increase can be requested but is not guaranteed.
+
+What one running copy of the app uses:
+
+- Frontmost with a conversation open: about 20 message reads and 4 space
+  reads per minute.
+- In the background with a conversation selected: about 6 message reads and
+  2 space reads per minute.
+- At first launch, or after the cache is cleared: one membership read per
+  direct message and group chat, in a burst. About 200 for an account with
+  200 conversations.
+
+What that allows on one shared client:
+
+- Message reads are the first limit: about 150 people with the app
+  frontmost at the same moment, or about 500 with it in the background.
+- First launches: about 15 people with 200 conversations each launching for
+  the first time in the same minute use up the membership reads.
+- One space open in about 45 copies at once reaches the per-space read
+  limit of 15 per second.
+
+So a few dozen colleagues are well within the limits. A few hundred need
+changes first.
+
+To do:
+
+- The app does not back off when it gets 429; it keeps polling at the same
+  rate. Add exponential backoff and show a "slowed down" state. Do this
+  before sharing the client with anyone.
+- Spread the first-launch membership reads out, and do not repeat them on
+  every launch for large group chats.
+- Poll less often: slow the open conversation to 5 to 10 seconds, stop
+  polling after some minutes without user activity, and stop when the
+  window is closed or the screen is locked.
+- Push delivery (first item in this file) removes most reads.
+- Not found in Google's table: which quota the read-marker calls count
+  against. Check in the Cloud console's quota page under real use.
