@@ -60,6 +60,7 @@ struct SidebarView: View {
     @Bindable var store: ChatStore
     @State private var search = ""
     @AppStorage(AppSettings.hideDeletedKey) private var hideDeletedUsers = true
+    @AppStorage(AppSettings.hideUnnamedAppsKey) private var hideUnnamedApps = true
     @AppStorage(AppSettings.showDatesKey) private var showDates = true
     @AppStorage(AppSettings.sidebarSortKey) private var sidebarSort = SidebarSort.recent
 
@@ -90,6 +91,9 @@ struct SidebarView: View {
         var spaces = spaces
         if hideDeletedUsers {
             spaces.removeAll { store.isWithDeletedUser($0) }
+        }
+        if hideUnnamedApps {
+            spaces.removeAll { store.isWithUnnamedApp($0) }
         }
         if !search.isEmpty {
             spaces = spaces.filter { store.title(for: $0).localizedCaseInsensitiveContains(search) }

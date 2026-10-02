@@ -10,9 +10,7 @@ struct QuickSwitcher: View {
     @FocusState private var isFocused: Bool
 
     private var results: [Space] {
-        let spaces = AppSettings.hideDeletedUsers
-            ? store.spaces.filter { !store.isWithDeletedUser($0) }
-            : store.spaces
+        let spaces = store.spaces.filter { !AppSettings.isHidden($0, in: store) }
         let matches = query.isEmpty
             ? spaces
             : spaces.filter { store.title(for: $0).localizedCaseInsensitiveContains(query) }

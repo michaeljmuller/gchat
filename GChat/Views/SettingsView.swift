@@ -6,6 +6,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.notificationsKey) private var notificationsEnabled = true
     @AppStorage(AppSettings.previewsKey) private var notificationPreviews = true
     @AppStorage(AppSettings.hideDeletedKey) private var hideDeletedUsers = true
+    @AppStorage(AppSettings.hideUnnamedAppsKey) private var hideUnnamedApps = true
     @AppStorage(AppSettings.showDatesKey) private var showDates = true
     @AppStorage(AppSettings.sidebarSortKey) private var sidebarSort = SidebarSort.recent
 
@@ -52,6 +53,7 @@ struct SettingsView: View {
                 }
                 Toggle("Show date of last activity", isOn: $showDates)
                 Toggle("Hide direct messages with deleted users", isOn: $hideDeletedUsers)
+                Toggle("Hide conversations with unnamed apps", isOn: $hideUnnamedApps)
             }
 
             Section("Notifications") {
