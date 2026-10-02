@@ -199,7 +199,8 @@ without security warnings, and signs in with their work account.
 Apple side:
 
 - Create a Developer ID Application certificate from the G2 Sub-CA
-  authority (developer.apple.com > Certificates). The old authority expires
+  authority (developer.apple.com > Certificates). Steps, and the to-do for
+  scripting the yearly renewal, are in docs/signing-certificate.md. The old authority expires
   on February 1, 2027, so do not issue from it. This Mac currently has only
   an Apple Development certificate, which is not enough. Certificates from
   the new authority expire yearly.
