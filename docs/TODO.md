@@ -171,3 +171,35 @@ today.
 
 Not verified yet: the Chat API quota numbers and the largest page size
 messages.list accepts.
+
+## Notifications
+
+The app posts a system notification for new messages from other people in
+any conversation that is not in front, and shows the count of unread
+conversations on the Dock icon. Settings can turn notifications off and hide
+the message text. See notify() in GChat/AppModel.swift and
+GChat/Notifier.swift. None of this has been checked with real incoming
+messages yet.
+
+To do first: verify the basics on a real account. A banner appears, clicking
+it opens the right conversation, the Dock badge counts correctly and clears,
+nothing is posted for your own messages or for the conversation in front,
+and macOS asks for notification permission once.
+
+Then decide and build:
+
+- Which conversations notify. Today all of them do, including busy spaces
+  and meeting chats. Likely wanted: direct messages and group chats always,
+  spaces only when you are mentioned, with a per-conversation mute.
+- Whether to follow the notification settings you have in Google Chat, if
+  the API exposes them, so the app and the phone agree.
+- Reply from the notification, and a Mark as Read action.
+- Grouping and summary text when several messages arrive together.
+- Whether hidden conversations (deleted users, apps) should ever notify.
+- Sound choice, and respecting Focus modes (the system handles Focus, but
+  check that time-sensitive delivery is not needed).
+- Delay. With polling, a notification can lag up to 15 seconds, or 30 when
+  the app is in the background. Push delivery (first item in this file)
+  would fix that.
+- Notifications only arrive while the app is running. Decide whether it
+  should keep running without a window, or start at login.
