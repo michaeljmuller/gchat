@@ -63,6 +63,28 @@ import Testing
         #expect(await eventually { second.title(for: dm) == "Ann Renamed" })
     }
 
+    @Test func deletedUsersAreNamedInTitles() async throws {
+        let human = { (id: String) in Membership(member: User(name: id, type: "HUMAN")) }
+        chat.update { state in
+            state.spaces = [
+                Space(name: "spaces/gone-dm", spaceType: "DIRECT_MESSAGE", lastActiveTime: now),
+                Space(name: "spaces/left-dm", spaceType: "DIRECT_MESSAGE", lastActiveTime: now),
+                Space(name: "spaces/group", spaceType: "GROUP_CHAT", lastActiveTime: now),
+            ]
+            state.members["spaces/gone-dm"] = [human("users/me-id"), human("users/gone")]
+            state.members["spaces/left-dm"] = [human("users/me-id")]
+            state.members["spaces/group"] = [human("users/me-id"), human("users/gone"), human("users/ann")]
+        }
+        let store = ChatStore(chat: chat, people: FakePeople(), defaults: defaults)
+        await store.refreshSpaces()
+
+        func title(_ name: String) -> String { store.title(for: store.space(named: name)!) }
+        #expect(await eventually { title("spaces/gone-dm") == "Deleted User" })
+        #expect(await eventually { title("spaces/left-dm") == "Deleted User" })
+        #expect(await eventually { title("spaces/group") == "Ann, Deleted User" })
+        #expect(store.name(for: User(name: "users/gone", type: "HUMAN")) == "Deleted User")
+    }
+
     @Test func openingMarksRead() async throws {
         let store = await makeStore()
         #expect(await eventually { store.unreadCount == 1 })

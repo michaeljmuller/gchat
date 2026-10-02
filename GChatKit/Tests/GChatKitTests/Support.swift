@@ -150,7 +150,8 @@ struct FakePeople: ProfileService {
     }
 
     func profile(for user: String) async throws -> Profile {
-        Profile(user: user, displayName: user == "users/ann" ? annName : "Someone Else")
+        if user == "users/gone" { throw APIError(status: 404, message: "Not found", code: "NOT_FOUND") }
+        return Profile(user: user, displayName: user == "users/ann" ? annName : "Someone Else")
     }
 
     func listDirectory() async throws -> [Profile] {

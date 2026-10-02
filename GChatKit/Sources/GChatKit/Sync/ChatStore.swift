@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 public struct PendingMessage: Identifiable, Hashable, Sendable {
     public let id: UUID
@@ -69,6 +70,8 @@ public final class ChatStore {
     /// Group chat space -> the other members' user resource names.
     private var groupMembers: [String: Set<String>]
     private var profiles: [String: Profile]
+    /// Users the People API reports as not found, which is how deleted accounts appear.
+    private var missingUsers: Set<String>
     /// Names taken from Chat responses, used until the People API answers.
     private var seedNames: [String: String] = [:]
 
@@ -91,7 +94,11 @@ public final class ChatStore {
         static let partners = "spacePartners"
         static let groupMembers = "groupMembers"
         static let profiles = "profiles"
+        static let missingUsers = "missingUsers"
     }
+
+    private static let deletedName = "Deleted User"
+    private static let log = Logger(subsystem: "org.themullers.gchat", category: "names")
 
     private static let activeInterval = Duration.seconds(3)
     private static let inactiveInterval = Duration.seconds(10)
@@ -105,6 +112,7 @@ public final class ChatStore {
         self.partners = defaults.dictionary(forKey: Keys.partners) as? [String: String] ?? [:]
         self.groupMembers = (defaults.dictionary(forKey: Keys.groupMembers) as? [String: [String]] ?? [:])
             .mapValues(Set.init)
+        self.missingUsers = Set(defaults.stringArray(forKey: Keys.missingUsers) ?? [])
         self.profiles = defaults.data(forKey: Keys.profiles)
             .flatMap { try? JSONDecoder().decode([String: Profile].self, from: $0) } ?? [:]
         self.selection = defaults.string(forKey: Keys.selection)
@@ -145,15 +153,19 @@ public final class ChatStore {
     private func currentTitle(for space: Space) -> String? {
         switch space.kind {
         case .directMessage:
-            return partners[space.name].flatMap { profiles[$0]?.displayName }
+            return partners[space.name].flatMap(knownName(of:))
         case .groupChat:
             guard let members = groupMembers[space.name], !members.isEmpty else { return nil }
-            let names = members.compactMap { profiles[$0]?.displayName }
+            let names = members.compactMap(knownName(of:))
             guard names.count == members.count else { return nil }
-            return Self.groupTitle(Array(names.sorted().prefix(8)))
+            return Self.groupTitle(names)
         default:
             return nil
         }
+    }
+
+    private func knownName(of user: String) -> String? {
+        profiles[user]?.displayName ?? (missingUsers.contains(user) ? Self.deletedName : nil)
     }
 
     /// The other person in a direct message, when known.
@@ -183,6 +195,7 @@ public final class ChatStore {
            !name.isEmpty {
             return name
         }
+        if missingUsers.contains(user.name) { return Self.deletedName }
         return user.isBot ? "App" : "Unknown"
     }
 
@@ -366,8 +379,13 @@ public final class ChatStore {
         defaults.set(groupMembers.mapValues { $0.sorted() }, forKey: Keys.groupMembers)
     }
 
+    /// First names in alphabetical order, with deleted users last.
     private static func groupTitle(_ names: [String]) -> String {
-        names.map { $0.split(separator: " ").first.map(String.init) ?? $0 }.joined(separator: ", ")
+        let people = names.filter { $0 != deletedName }
+            .map { $0.split(separator: " ").first.map(String.init) ?? $0 }
+            .sorted()
+        let deleted = names.filter { $0 == deletedName }
+        return (Array(people.prefix(8)) + deleted.prefix(1)).joined(separator: ", ")
     }
 
     private func loadDirectory() async {
@@ -591,9 +609,31 @@ public final class ChatStore {
         // Once per launch, even when cached, so that renames are picked up.
         guard !profileRequests.contains(user) else { return }
         profileRequests.insert(user)
-        Task {
-            if let profile = try? await people.profile(for: user) { store([profile]) }
+        Task { await lookUp(user) }
+    }
+
+    /// Fetches a person from the People API and records the result, including "not found".
+    @discardableResult
+    private func lookUp(_ user: String) async -> Profile? {
+        profileRequests.insert(user)
+        do {
+            let profile = try await people.profile(for: user)
+            store([profile])
+            setMissing(user, false)
+            return profile
+        } catch let error as APIError where error.status == 404 {
+            Self.log.info("People lookup for \(user, privacy: .public): not found")
+            setMissing(user, true)
+        } catch {
+            Self.log.info("People lookup for \(user, privacy: .public) failed: \(String(describing: error), privacy: .public)")
         }
+        return nil
+    }
+
+    private func setMissing(_ user: String, _ isMissing: Bool) {
+        guard missingUsers.contains(user) != isMissing else { return }
+        if isMissing { missingUsers.insert(user) } else { missingUsers.remove(user) }
+        defaults.set(missingUsers.sorted(), forKey: Keys.missingUsers)
     }
 
     private func store(_ updates: [Profile]) {
@@ -616,9 +656,7 @@ public final class ChatStore {
             users += (groupMembers[space.name] ?? []).sorted()
         }
         let pending = users.filter { profileRequests.insert($0).inserted }
-        await forEachLimited(pending) { user in
-            if let profile = try? await self.people.profile(for: user) { self.store([profile]) }
-        }
+        await forEachLimited(pending) { await self.lookUp($0) }
     }
 
     /// Direct messages and group chats have no name of their own; build one from the members.
@@ -644,6 +682,15 @@ public final class ChatStore {
             return
         }
         let others = members.compactMap(\.member).filter { $0.name != me?.user && !$0.isBot }
+        Self.log.info("""
+            Members of \(space.name, privacy: .public) (\(space.spaceType ?? "?", privacy: .public)): \
+            \(members.count) listed, others: \(others.map(\.name).joined(separator: " "), privacy: .public)
+            """)
+        if space.kind == .directMessage, others.isEmpty {
+            // Only the signed-in user is left in the conversation.
+            setTitle(Self.deletedName, for: space.name)
+            return
+        }
         var names: [String] = []
         for user in others.prefix(8) {
             if let name = user.displayName, !name.isEmpty {
@@ -652,10 +699,10 @@ public final class ChatStore {
                 requestProfile(user.name)
             } else if let name = profiles[user.name]?.displayName {
                 names.append(name)
-            } else if let profile = try? await people.profile(for: user.name) {
-                profileRequests.insert(user.name)
-                store([profile])
-                if let name = profile.displayName { names.append(name) }
+            } else if let name = await lookUp(user.name)?.displayName {
+                names.append(name)
+            } else if missingUsers.contains(user.name) {
+                names.append(Self.deletedName)
             }
         }
         if space.kind == .directMessage, let partner = others.first {
