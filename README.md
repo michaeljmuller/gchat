@@ -138,10 +138,13 @@ After sign-in, in the app:
   sharing turned off (Admin console > Directory > Directory settings).
 - The New Conversation sheet says the directory could not be loaded, with
   "The G Suite domain admin has disabled external directory sharing". The
-  organization does not let apps read its directory. A Workspace admin can
-  allow it in the Admin console under Directory > Directory settings >
-  Sharing settings > External directory sharing. Until then the sheet lists
-  only people you already have a conversation with.
+  organization shares only the signed-in user's own profile with third-party
+  apps, not the directory. A Workspace super admin can change that in the
+  Admin console under Directory > Directory settings > Sharing settings >
+  External Directory sharing, from "Authenticated user basic profile fields"
+  to "Organization data and authenticated user basic profile fields". It
+  applies to every third-party app in the organization. Until then the sheet
+  lists only people you already have a conversation with.
 - "Your sign-in has expired". The refresh token was revoked or, if the
   consent screen audience is External and in Testing, it expired after 7
   days. Use Internal (step 4).
