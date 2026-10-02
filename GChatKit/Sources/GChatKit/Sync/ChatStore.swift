@@ -582,7 +582,9 @@ public final class ChatStore {
     /// Direct messages and group chats have no name of their own; build one from the members.
     private func resolveTitles() async {
         let untitled = spaces.filter {
-            ($0.displayName ?? "").isEmpty && titles[$0.name] == nil && !titleAttempts.contains($0.name)
+            // Group chats are also looked up when their members are not recorded yet.
+            ($0.displayName ?? "").isEmpty && !titleAttempts.contains($0.name)
+                && (titles[$0.name] == nil || ($0.kind == .groupChat && groupMembers[$0.name] == nil))
         }
         guard !untitled.isEmpty else { return }
         for space in untitled { titleAttempts.insert(space.name) }
