@@ -1,0 +1,142 @@
+import Foundation
+@testable import GChatKit
+
+/// Answers every request of a URLSession from a closure.
+final class StubProtocol: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (Int, String))?
+
+    static func session() -> URLSession {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubProtocol.self]
+        return URLSession(configuration: configuration)
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let (status, body) = Self.handler?(request) ?? (500, "")
+        let response = HTTPURLResponse(
+            url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data(body.utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
+extension URLRequest {
+    /// URLProtocol receives the body as a stream.
+    var bodyString: String {
+        if let httpBody { return String(decoding: httpBody, as: UTF8.self) }
+        guard let stream = httpBodyStream else { return "" }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count <= 0 { break }
+            data.append(buffer, count: count)
+        }
+        return String(decoding: data, as: UTF8.self)
+    }
+}
+
+final class Recorder<Value: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [Value] = []
+
+    func append(_ value: Value) {
+        lock.withLock { storage.append(value) }
+    }
+
+    var values: [Value] {
+        lock.withLock { storage }
+    }
+}
+
+struct FixedToken: AccessTokenProviding {
+    func accessToken(forceRefresh: Bool) async throws -> String {
+        forceRefresh ? "fresh" : "stale"
+    }
+}
+
+final class FakeChat: ChatService, @unchecked Sendable {
+    struct State {
+        var spaces: [Space] = []
+        var messages: [String: [Message]] = [:]
+        var readTimes: [String: Date] = [:]
+        var members: [String: [Membership]] = [:]
+        var sendFails = false
+        var markedRead: [String] = []
+    }
+
+    private let lock = NSLock()
+    private var state = State()
+
+    func update<T>(_ body: (inout State) throws -> T) rethrows -> T {
+        try lock.withLock { try body(&state) }
+    }
+
+    var markedRead: [String] { update { $0.markedRead } }
+
+    func listSpaces() async throws -> [Space] {
+        update { $0.spaces }
+    }
+
+    func listMessages(in space: String, pageSize: Int, pageToken: String?, after: Date?) async throws -> MessagePage {
+        let all = update { $0.messages[space] ?? [] }
+        let matching = all
+            .filter { after == nil || $0.createTime! > after! }
+            .sorted { $0.createTime! > $1.createTime! }
+        return MessagePage(messages: matching)
+    }
+
+    func sendMessage(_ text: String, to space: String) async throws -> Message {
+        try update { state in
+            if state.sendFails { throw APIError(status: 500, message: "Server error") }
+            let message = Message(
+                name: "\(space)/messages/sent\(state.messages[space, default: []].count)",
+                sender: User(name: "users/me-id"), createTime: Date(), text: text)
+            state.messages[space, default: []].append(message)
+            return message
+        }
+    }
+
+    func listMembers(of space: String) async throws -> [Membership] {
+        update { $0.members[space] ?? [] }
+    }
+
+    func readState(for space: String) async throws -> SpaceReadState {
+        SpaceReadState(lastReadTime: update { $0.readTimes[space] })
+    }
+
+    func markRead(space: String, at time: Date) async throws {
+        update {
+            $0.readTimes[space] = time
+            $0.markedRead.append(space)
+        }
+    }
+}
+
+struct FakePeople: ProfileService {
+    func me() async throws -> Profile {
+        Profile(user: "users/me-id", displayName: "Me")
+    }
+
+    func profile(for user: String) async throws -> Profile {
+        Profile(user: user, displayName: user == "users/ann" ? "Ann Example" : "Someone Else")
+    }
+}
+
+/// Waits for work the store started in the background.
+@MainActor
+func eventually(_ condition: @MainActor () -> Bool) async -> Bool {
+    for _ in 0..<200 {
+        if condition() { return true }
+        try? await Task.sleep(for: .milliseconds(10))
+    }
+    return condition()
+}
