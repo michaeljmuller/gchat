@@ -1,12 +1,15 @@
 # Developer ID signing certificate
 
 Releases of GChat for other people are signed with a Developer ID
-Application certificate and notarized by Apple. These certificates expire
-every year, so this is a yearly task.
+Application certificate and notarized by Apple.
 
-First created: October 2026, from the G2 authority.
-Next renewal due: October 2027 (check the exact date under Certificates on
-developer.apple.com).
+Current certificate: "Developer ID Application: Michael Muller (84URFQ3GPW)",
+issued October 2, 2026 by the G2 authority, valid until September 17, 2031.
+Apple's email of 2026 said G2 certificates expire yearly; the certificate
+itself says 2031. Trust the certificate, and check its date with:
+
+    security find-certificate -c "Developer ID Application: Michael Muller" -p \
+        | openssl x509 -noout -enddate
 
 Only the Apple developer account holder can create Developer ID
 certificates.
@@ -65,7 +68,7 @@ revoke it.
    files and otherwise asks for each.
 
 
-## To do: script the renewal
+## To do (low priority): script the renewal
 
 Apple's App Store Connect API can create certificates, so the steps above
 can become one command:
