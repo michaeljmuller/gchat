@@ -94,6 +94,7 @@ final class AppModel {
         auth = nil
         drafts = [:]
         notifier.setBadge(0)
+        AttachmentFiles.removeAll()
     }
 
     // MARK: - System integration

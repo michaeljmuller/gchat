@@ -1,5 +1,4 @@
 import GChatKit
-import QuickLook
 import SwiftUI
 
 struct ConversationView: View {
@@ -193,12 +192,14 @@ struct MessageRowView: View {
                     }
                 }
                 if !message.markup.isEmpty {
-                    Text(rendered(message))
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
+                    MessageTextView(text: rendered(message))
                 }
                 ForEach(message.attachment ?? [], id: \.self) { attachment in
-                    AttachmentChip(store: store, attachment: attachment)
+                    if attachment.isDownloadableImage {
+                        InlineImageView(store: store, attachment: attachment)
+                    } else {
+                        AttachmentChip(store: store, attachment: attachment)
+                    }
                 }
             }
             Spacer(minLength: 0)
@@ -211,76 +212,6 @@ struct MessageRowView: View {
         let mentions = message.mentionNames
         return ChatMarkup.render(message.markup) { user in
             mentions[user] ?? store.profile(for: user)?.displayName.map { "@\($0)" }
-        }
-    }
-}
-
-/// Where downloaded attachments are kept while they are being viewed.
-enum AttachmentFiles {
-    static var folder: URL {
-        FileManager.default.temporaryDirectory.appendingPathComponent("attachments", isDirectory: true)
-    }
-
-    /// Deletes every downloaded attachment. Called at launch and at quit.
-    static func removeAll() {
-        try? FileManager.default.removeItem(at: folder)
-    }
-}
-
-/// A file attached to a message. Files uploaded to Chat are downloaded with
-/// the user's sign-in and shown in Quick Look. Others, such as Google Drive
-/// files, open in the browser.
-struct AttachmentChip: View {
-    let store: ChatStore
-    let attachment: Attachment
-    @State private var isLoading = false
-    @State private var previewURL: URL?
-
-    var body: some View {
-        let label = HStack(spacing: 5) {
-            if isLoading {
-                ProgressView().controlSize(.small)
-            } else {
-                Image(systemName: "paperclip")
-            }
-            Text(attachment.contentName ?? "Attachment").lineLimit(1)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
-
-        if attachment.attachmentDataRef?.resourceName != nil {
-            Button(action: openInQuickLook) { label }
-                .buttonStyle(.plain)
-                .disabled(isLoading)
-                .help("Open")
-                .quickLookPreview($previewURL)
-        } else if let url = attachment.url {
-            Link(destination: url) { label }
-                .buttonStyle(.plain)
-                .help("Open in browser")
-        } else {
-            label
-        }
-    }
-
-    private func openInQuickLook() {
-        isLoading = true
-        Task {
-            defer { isLoading = false }
-            do {
-                guard let data = try await store.download(attachment) else { return }
-                // One folder per file, so that the original file name can be kept.
-                let folder = AttachmentFiles.folder
-                    .appendingPathComponent(UUID().uuidString, isDirectory: true)
-                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                let name = (attachment.contentName ?? "Attachment").replacingOccurrences(of: "/", with: "-")
-                let file = folder.appendingPathComponent(name)
-                try data.write(to: file)
-                previewURL = file
-            } catch {
-                store.alertMessage = "Could not open the attachment: \(error.localizedDescription)"
-            }
         }
     }
 }

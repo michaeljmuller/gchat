@@ -71,6 +71,11 @@ public struct Attachment: Codable, Hashable, Sendable {
     /// Set for files uploaded to Chat. The file can then be downloaded through the API.
     public var attachmentDataRef: DataRef?
 
+    /// An image uploaded to Chat, which can be downloaded and shown inline.
+    public var isDownloadableImage: Bool {
+        attachmentDataRef?.resourceName != nil && (contentType ?? "").hasPrefix("image/")
+    }
+
     /// A link that opens the attachment in the browser.
     public var url: URL? {
         if let id = driveDataRef?.driveFileId {
