@@ -1,166 +1,139 @@
-# Request: allow third-party apps to read the organization directory
+# Request: let approved apps read the organization directory
 
-Requested by: [name]
-Date: [date]
-For: Google Workspace administrator with the Directory settings privilege
+Requested by: [name]. Date: [date].
+Needs: the Directory settings and Service Settings administrator privileges.
 
 
 ## The request
 
-Change one Google Workspace setting:
+Two changes, made together so that only approved apps gain directory access.
 
-    Admin console > Directory > Directory settings > Sharing settings >
-    External Directory sharing
+1. Restrict which apps can read contacts and directory data.
+   Admin console > Security > Access and data control > API controls >
+   Manage Google Services: set Contacts to Restricted.
+   Then under Manage App Access, add this OAuth client and give it access
+   (Specific Google data limited to its scopes, or Trusted):
+   [client ID]
 
-    from:  Authenticated user basic profile fields
-    to:    Organization data and authenticated user basic profile fields
+2. Turn on directory sharing for apps.
+   Admin console > Directory > Directory settings > Sharing settings >
+   External Directory sharing: change "Authenticated user basic profile
+   fields" to "Organization data and authenticated user basic profile
+   fields".
+
+Do step 1 first. Step 2 without step 1 opens the directory to any app an
+employee approves.
 
 
 ## Why
 
-I use a native Mac client for Google Chat (GChat) that talks to Google's
-public APIs with my own sign-in. To start a conversation with a colleague it
-shows a list of people in the organization, which it gets from the Google
-People API (the people.listDirectoryPeople method, with the
-directory.readonly permission).
-
-With the current setting Google refuses that call with: "The G Suite domain
-admin has disabled external directory sharing." The app then only lists
-people I already have a conversation with. Everything else in the app works
-without this change.
+I use a native Mac client for Google Chat that calls Google's public APIs
+with my own sign-in. To start a conversation with a colleague it lists the
+people in the organization through the People API. Google currently refuses
+that call ("The G Suite domain admin has disabled external directory
+sharing"), so the app only lists people I already have a conversation with.
+Everything else in the app works without this change.
 
 
-## What the setting does
+## What each change does
 
-Google's description of the two options, from its admin help:
+Directory sharing (step 2). Today a third-party app can read only the
+signed-in user's own name, photo and email. After the change, an app that a
+user has signed in to and granted a directory or contacts permission can
+read the directory that user already sees in Gmail and Contacts. Per Google,
+this applies to the People, CardDAV and Contacts APIs, never includes
+personal contacts, private profile data, or suspended or deleted users, and
+can take up to 24 hours to apply. It shares nothing with people outside the
+organization; "external" means apps other than Google's own.
 
-- Authenticated user basic profile fields (current): "Share only the
-  authenticated user's name, photo, and email address to enable Google
-  Sign-In if the user grants the appropriate scopes."
-- Organization data and authenticated user basic profile fields (requested):
-  "Share all Directory information that is shared within your organization.
-  This information includes profile information for users in your
-  organization that admins, users, and shared external contacts have
-  created."
-
-In plain terms: today a third-party app can learn who the signed-in user is
-and nothing about anyone else. After the change, a third-party app that a
-user has signed in to, and granted directory permission, can read the same
-directory that the user can already see in Gmail, Contacts and Chat.
-
-Scope of the setting, per Google:
-
-- It applies to three APIs: the People API, the CardDAV API and the Contacts
-  API v3, and to apps that use them. Google's examples are iOS Mail and
-  third-party contacts apps on Android.
-- It never shares users' personal contacts or private profile data, and it
-  does not include suspended or deleted users.
-- A change can take up to 24 hours to apply.
+API controls (step 1). A service marked Restricted can be used only by apps
+an admin has configured as Trusted or as Specific Google data. Everything
+else is refused, whatever a user clicks on the consent screen. This turns
+the organization-wide directory setting into a per-app decision.
 
 
-## What it does not do
+## Risks of directory sharing
 
-- It does not share anything with people outside the organization. "External"
-  refers to apps other than Google's own, not to external people.
-- It does not give any app access by itself. An app reads the directory only
-  after a user in the organization signs in to it and approves a directory or
-  contacts permission on Google's consent screen.
-- It does not change what users can see. Anyone in the organization can
-  already browse the directory in Google's own apps.
-- It does not touch mail, files, calendars or chat content.
+The setting is organization-wide and has no per-app list of its own. Without
+step 1:
 
+- Any app an employee approves, including apps from outside publishers, can
+  copy the whole directory: names, emails, photos and any other published
+  fields such as titles, phone numbers and managers.
+- Consent phishing gets more valuable. Tricking one employee into approving
+  an app yields the directory, where today it yields one profile.
+- One compromised account or stolen app token can export the directory
+  quickly and completely through the API.
+- Copied data cannot be recalled, and a current staff list with roles is
+  useful for targeted phishing and impersonation.
 
-## Risks
-
-The setting is organization-wide. It cannot be limited to one app from this
-screen, so the change is broader than the one app that prompted it.
-
-1. Any app an employee approves can copy the directory. That includes apps
-   from outside publishers. What it can read is whatever the directory
-   holds: names, email addresses, photos, and any other fields the
-   organization publishes there, such as job titles, phone numbers,
-   departments and managers, plus shared external contacts.
-
-2. Consent phishing. An attacker can build an app that asks for directory
-   permission and trick one employee into approving it. Today that yields
-   only that employee's own profile. After the change it yields the
-   directory.
-
-3. Bulk export. A person or malware with access to one account can already
-   read the directory through Google's web apps, but slowly. The API makes
-   it fast and complete. The same applies to a stolen app token.
-
-4. Once copied, the data is outside Google's controls. A complete,
-   current staff list with roles is useful for targeted phishing and
-   impersonation, and it cannot be recalled.
-
-5. Apps the organization already allows, such as mail and contacts apps on
-   phones, will start receiving directory data they do not receive today.
-
-How large this is depends on how sensitive the directory is. If it holds
-only names and work email addresses that are largely discoverable anyway,
-the added exposure is modest. If it holds personal phone numbers or
-reporting lines, it is larger.
+With step 1 in place these are limited to the apps that were approved.
 
 
-## Mitigations
+## Risks of the API controls restriction
 
-- Restrict which third-party apps may access Workspace data. In the Admin
-  console under Security > Access and data control > API controls, access
-  can be limited to apps that an admin has marked as trusted, by OAuth
-  client ID. With that in place, only approved apps can use the directory,
-  whatever employees click. This is the main control, and it turns an
-  organization-wide change into a per-app decision. To confirm before
-  relying on it: that the organization's API controls cover the People API
-  directory permission.
-- Review what the directory contains before changing the setting, and
-  remove or hide fields that should not be widely available (Directory
-  settings > Profile editing and visibility settings).
-- Limit who appears in the directory for whom, using directory visibility
-  settings or custom directories, if parts of the organization should not
-  be listed.
-- Monitor. The Admin console's token and OAuth audit logs show which apps
-  have been granted which permissions, and by whom. Review them after the
-  change and periodically.
-- Keep user awareness current on approving unfamiliar apps on Google's
-  consent screen.
-- The change is reversible. Setting the option back stops further reads at
-  once (allowing for propagation time). It does not recall data already
-  copied.
+- It can break apps people use today. Per Google, when a service becomes
+  Restricted, installed apps that are not trusted stop working and their
+  tokens are revoked. That may include contact sync on phones and in mail
+  clients, CRM and calendar tools, and Apps Script projects that read
+  contacts. Check the accessed-apps list under API controls first and
+  approve what should keep working.
+- It is ongoing work. New apps that need contacts have to be reviewed and
+  approved, and users will hit a "blocked by admin" message until they are.
+- Approval is by OAuth client ID and is only as good as the review. Trusted
+  grants access to every Google service, restricted or not; Specific Google
+  data limits an app to named scopes and is the safer choice.
+- "Trust internal apps" approves every app built inside the organization,
+  including scripts any employee writes. Leave it off unless that is
+  intended, and approve this client individually.
+- Restricting Contacts does not cover other data. Mail, Drive, Chat and
+  Calendar are separate services with their own Restricted setting.
+
+To confirm before relying on step 1: that Contacts appears in the Manage
+Google Services list and that restricting it blocks the People API directory
+permission (directory.readonly). Google's help page does not list the
+services. A test with an unapproved app answers it. If Contacts cannot be
+restricted, the alternative is the stricter setting for unconfigured apps,
+"Allow users to access third-party apps that only ask for Google sign-in
+info", which blocks every unapproved app from all Google data and has a much
+larger impact.
 
 
-## About the app that prompted this
+## Other mitigations
 
-- Its OAuth client lives in a Google Cloud project inside this organization,
-  with the consent screen set to Internal, so only accounts in the
-  organization can sign in to it.
-- From the directory it reads names, email addresses and photos. It keeps
-  them on the user's Mac, in the app's local preferences. It has no server
-  and sends them nowhere else.
-- OAuth client ID, for marking as trusted: [client ID]
+- Review what the directory publishes and remove fields that should not be
+  widely available before step 2.
+- Review the OAuth token audit log after the change and periodically.
+- Both changes are reversible. Reverting stops further access but does not
+  recall data already copied.
 
-These points describe one app. They do not reduce the organization-wide
-effect of the setting described under Risks.
+
+## About the app
+
+Its OAuth client is in a Google Cloud project inside this organization with
+the consent screen set to Internal, so only our accounts can sign in. From
+the directory it reads names, emails and photos and keeps them on the user's
+Mac. It has no server and sends them nowhere else. It also uses Google Chat
+permissions, so if Chat is a Restricted service the same client needs to be
+approved for that too.
 
 
 ## If the answer is no
 
 The app keeps working. New conversations can be started with anyone I already
-have a conversation with; for someone new, the first message has to be sent
-from chat.google.com. A possible later change to the app is to start a
-conversation by typing a colleague's email address, which would not need the
-directory.
+have one with; a first message to someone new has to be sent from
+chat.google.com.
 
 
 ## References
 
-- Google Workspace Admin Help, "Let third-party apps access Directory data":
+- Let third-party apps access Directory data:
   https://knowledge.workspace.google.com/admin/users/let-third-party-apps-access-directory-data
-  (also reachable as https://support.google.com/a/answer/6343701)
+- Control which apps access Google Workspace data:
+  https://knowledge.workspace.google.com/admin/apps/control-which-apps-access-google-workspace-data
 - People API, people.listDirectoryPeople:
   https://developers.google.com/people/api/rest/v1/people/listDirectoryPeople
 
-The quoted option descriptions and the scope of the setting are from the
-first reference. Check the wording against the live page before sending. The
-Admin console paths under Mitigations are from general knowledge of the
-console and should be verified by the administrator.
+Check Google's wording and the console paths against the live pages before
+acting; the option names here were taken from those pages but not verified
+in this organization's console.
