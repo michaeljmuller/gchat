@@ -49,11 +49,13 @@ public struct KeychainTokenStore: TokenStore {
     public func save(_ tokens: TokenSet) {
         guard let data = try? JSONEncoder().encode(tokens) else { return }
         let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
-        if status == errSecItemNotFound {
-            var attributes = query
-            attributes[kSecValueData as String] = data
-            SecItemAdd(attributes as CFDictionary, nil)
-        }
+        guard status != errSecSuccess else { return }
+        // Not found, or an item left by a differently signed build that this one
+        // may not modify: replace it.
+        SecItemDelete(query as CFDictionary)
+        var attributes = query
+        attributes[kSecValueData as String] = data
+        SecItemAdd(attributes as CFDictionary, nil)
     }
 
     public func clear() {
