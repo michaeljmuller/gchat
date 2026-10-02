@@ -3,6 +3,7 @@ import SwiftUI
 
 @main
 struct GChatApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel()
 
     var body: some Scene {
@@ -20,6 +21,14 @@ struct GChatApp: App {
             SettingsView()
                 .environment(model)
         }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// By default the app keeps running without a window, so notifications
+    /// still arrive. The setting makes closing the window quit the app.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        UserDefaults.standard.bool(forKey: AppSettings.quitOnCloseKey)
     }
 }
 

@@ -199,6 +199,9 @@ Tests for the non-UI code:
 - Notifications arrive for messages in conversations you are not looking at.
   Clicking one opens that conversation. The Dock badge counts unread
   conversations.
+- Closing the window leaves GChat running, so notifications keep arriving;
+  click the Dock icon to bring the window back. A setting makes closing the
+  window quit the app instead.
 - Settings (Command-comma): sort the sidebar by most recent activity or
   alphabetically, show or hide the date of last activity next to each
   conversation, hide direct messages with deleted users and with apps that Google
