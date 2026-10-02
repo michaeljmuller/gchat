@@ -39,3 +39,36 @@ What it would take:
 Not verified yet: the exact scopes, subscription lifetime and renewal rules,
 whether events carry the full message or only its name, and Pub/Sub cost at
 this volume (expected to be within the free tier).
+
+## Display images inline
+
+Today every attachment, images included, is shown as a chip with a paperclip
+and the file name that opens in the browser. See AttachmentChip in
+GChat/Views/ConversationView.swift.
+
+Goal: show image attachments in the transcript as a thumbnail that fits the
+message column, with a click to open full size (Quick Look) and the usual
+drag and copy behaviour. Other file types stay as chips.
+
+What it would take:
+
+- Decode attachmentDataRef (and thumbnailUri) on Attachment in
+  GChatKit/Sources/GChatKit/API/Models.swift; they are ignored today.
+- Download uploaded images through the Chat API media endpoint with the
+  user's token. AsyncImage cannot send an Authorization header, so this needs
+  a small authenticated image loader in GChatKit.
+- Cache downloaded images on disk, bounded in size, so scrolling and
+  relaunching do not download them again.
+- Reserve the image's space before it loads, so the transcript does not jump
+  and the pinned-to-bottom behaviour keeps working.
+- Images shared from Google Drive come as a Drive file ID, not as Chat media.
+  Showing those needs a Drive read scope, which is a broad permission; decide
+  whether that is acceptable or whether Drive images stay as chips.
+- Animated GIFs, and images pasted as links with a preview, are separate
+  cases; decide whether they are in scope.
+
+Not verified yet: whether the existing chat.messages scope is enough for the
+media download, whether thumbnailUri can be fetched with a token or only with
+browser cookies, and whether the API reports image dimensions.
+
+Related, not part of this item: sending images from the app (upload).
