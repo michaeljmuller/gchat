@@ -215,6 +215,18 @@ struct MessageRowView: View {
     }
 }
 
+/// Where downloaded attachments are kept while they are being viewed.
+enum AttachmentFiles {
+    static var folder: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("attachments", isDirectory: true)
+    }
+
+    /// Deletes every downloaded attachment. Called at launch and at quit.
+    static func removeAll() {
+        try? FileManager.default.removeItem(at: folder)
+    }
+}
+
 /// A file attached to a message. Files uploaded to Chat are downloaded with
 /// the user's sign-in and shown in Quick Look. Others, such as Google Drive
 /// files, open in the browser.
@@ -259,8 +271,7 @@ struct AttachmentChip: View {
             do {
                 guard let data = try await store.download(attachment) else { return }
                 // One folder per file, so that the original file name can be kept.
-                let folder = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("attachments", isDirectory: true)
+                let folder = AttachmentFiles.folder
                     .appendingPathComponent(UUID().uuidString, isDirectory: true)
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 let name = (attachment.contentName ?? "Attachment").replacingOccurrences(of: "/", with: "-")

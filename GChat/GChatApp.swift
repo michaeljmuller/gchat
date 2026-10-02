@@ -27,6 +27,14 @@ struct GChatApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// By default the app keeps running without a window, so notifications
     /// still arrive. The setting makes closing the window quit the app.
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        AttachmentFiles.removeAll()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        AttachmentFiles.removeAll()
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         UserDefaults.standard.bool(forKey: AppSettings.quitOnCloseKey)
     }

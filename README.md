@@ -249,6 +249,11 @@ Messages edited or deleted elsewhere do not change in an open transcript until
 the app is restarted, because polling only asks for newly created messages.
 Unread markers are only loaded for conversations active in the last 90 days.
 
+Clicking an attachment that was uploaded to Chat downloads it into the app's
+temporary folder and shows it in Quick Look. Those copies are deleted when the
+app quits and again at the next launch. Google Drive attachments open in the
+browser.
+
 Tokens are stored in the login Keychain. Names, photos and conversation titles
 are cached in the app's preferences. Messages are kept in memory only.
 
