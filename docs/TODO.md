@@ -130,3 +130,44 @@ Things to check in this app, to be confirmed or replaced by the research:
 
 Most of the UI has only been compiled and unit tested, not reviewed on
 screen, so expect to find more than is listed here.
+
+## Load the whole conversation history, or back to a chosen date
+
+Today opening a conversation loads the newest 50 messages. Older ones load 50
+at a time when you scroll to the top or click Load Earlier Messages. Nothing
+is kept between launches. See open() and loadOlder() in
+GChatKit/Sources/GChatKit/Sync/ChatStore.swift.
+
+Goal: have the full history of a conversation available, or everything back
+to a period the user picks (for example 30 days, 1 year, everything), without
+paging by hand.
+
+Decisions to make first:
+
+- Per conversation on demand ("Load Entire History" command), or
+  automatically for every conversation in the background.
+- The period choices and the default, as a setting.
+- Whether history is kept on disk. Without that, a full load is repeated
+  on every launch, which is slow for long conversations and uses API quota.
+
+What it would take:
+
+- A loop over messages.list pages until the start of the conversation or the
+  cutoff date, with progress shown and a way to cancel.
+- Rate limiting, so loading many conversations does not hit the Chat API
+  per-user quota, and backing off when it does.
+- A local store for messages (SQLite is the likely fit), keyed by message
+  name, with the newest and oldest loaded time per conversation so that only
+  the gaps are fetched later.
+- Transcript performance with thousands of messages: check that the lazy
+  list stays smooth and that row grouping is not recomputed for the whole
+  conversation on every change.
+- Storing messages on disk changes the privacy note in the README, which
+  says messages are kept in memory only. Decide where the file lives and
+  that Sign Out deletes it.
+
+This would also make searching message text possible, which the app cannot do
+today.
+
+Not verified yet: the Chat API quota numbers and the largest page size
+messages.list accepts.
