@@ -1,3 +1,4 @@
+import GChatKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -10,7 +11,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Account") {
+            Section {
                 if let me = model.store?.me {
                     LabeledContent("Signed in as") {
                         VStack(alignment: .trailing) {
@@ -33,6 +34,16 @@ struct SettingsView: View {
                 }
                 Button("Sign Out") { model.signOut() }
                     .disabled(model.store == nil)
+            } header: {
+                Text("Account")
+            } footer: {
+                Text("""
+                    Your sign-in is saved in your Keychain as "\(KeychainTokenStore.label)". It holds the \
+                    token Google issued to GChat, not your password. Sign Out deletes it.
+                    """)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             Section("Sidebar") {

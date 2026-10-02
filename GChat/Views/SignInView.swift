@@ -1,3 +1,4 @@
+import GChatKit
 import SwiftUI
 
 struct SignInView: View {
@@ -28,6 +29,16 @@ struct SignInView: View {
             .controlSize(.large)
             .buttonStyle(.borderedProminent)
             .disabled(model.isSigningIn || model.clientID.trimmingCharacters(in: .whitespaces).isEmpty)
+
+            Text("""
+                GChat keeps you signed in by saving the sign-in token from Google in your Keychain, \
+                as "\(KeychainTokenStore.label)". macOS may ask you to allow GChat to use that item. \
+                Your Google password is never seen or stored by GChat.
+                """)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             if let error = model.signInError {
                 Text(error)

@@ -23,6 +23,12 @@ public struct KeychainTokenStore: TokenStore {
     private let service: String
     private let account = "default"
 
+    public static let label = "GChat Google sign-in"
+    public static let comment = """
+        Keeps GChat signed in to Google Chat. Holds the sign-in tokens Google issued to GChat, \
+        not your Google password. Deleting this item signs GChat out.
+        """
+
     public init(service: String = "org.themullers.gchat.oauth") {
         self.service = service
     }
@@ -48,14 +54,18 @@ public struct KeychainTokenStore: TokenStore {
 
     public func save(_ tokens: TokenSet) {
         guard let data = try? JSONEncoder().encode(tokens) else { return }
-        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        // The label is the name macOS shows in its permission prompt and in Keychain Access.
+        let details: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrLabel as String: Self.label,
+            kSecAttrComment as String: Self.comment,
+        ]
+        let status = SecItemUpdate(query as CFDictionary, details as CFDictionary)
         guard status != errSecSuccess else { return }
         // Not found, or an item left by a differently signed build that this one
         // may not modify: replace it.
         SecItemDelete(query as CFDictionary)
-        var attributes = query
-        attributes[kSecValueData as String] = data
-        SecItemAdd(attributes as CFDictionary, nil)
+        SecItemAdd(query.merging(details) { $1 } as CFDictionary, nil)
     }
 
     public func clear() {

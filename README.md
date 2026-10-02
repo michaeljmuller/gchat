@@ -195,6 +195,26 @@ Tests for the non-UI code:
   devices, and the other way round.
 
 
+## Keychain access
+
+GChat saves one item in your login Keychain, named "GChat Google sign-in". It
+holds the tokens Google issued when you signed in: a refresh token, a
+short-lived access token and its expiry time. It never holds your Google
+password, which you type into the system sign-in sheet and GChat does not see.
+
+GChat reads the item at launch to keep you signed in, and rewrites it about
+once an hour. Sign Out deletes it. Deleting it yourself in Keychain Access
+signs GChat out.
+
+macOS may show a prompt saying GChat wants to use confidential information
+stored in "GChat Google sign-in". That is GChat reading its own item. It
+appears when the copy of GChat that is running is not the copy that saved the
+item, which happens after a rebuild that changes the app's signature. Choose
+Always Allow. A build signed with a developer team keeps the same signature
+across rebuilds and does not ask again; an ad hoc signed build
+(CODE_SIGN_IDENTITY=-) asks after every rebuild.
+
+
 ## How it works, and its limits
 
 The Chat API has no way to push new messages to a client app, so the app
