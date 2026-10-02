@@ -65,12 +65,50 @@ struct SidebarView: View {
     @AppStorage(AppSettings.showDatesKey) private var showDates = true
     @AppStorage(AppSettings.sidebarSortKey) private var sidebarSort = SidebarSort.recent
 
+    private struct SidebarSection: Identifiable {
+        let title: String
+        let shortTitle: String
+        let icon: String
+        let spaces: [Space]
+
+        var id: String { title }
+    }
+
+    private var sections: [SidebarSection] {
+        [
+            SidebarSection(
+                title: "Direct Messages", shortTitle: "Direct", icon: "person",
+                spaces: filtered(store.directMessages)),
+            SidebarSection(
+                title: "Group Chats", shortTitle: "Groups", icon: "person.2",
+                spaces: filtered(store.groupChats)),
+            SidebarSection(
+                title: "Spaces", shortTitle: "Spaces", icon: "number",
+                spaces: filtered(store.namedSpaces)),
+            SidebarSection(
+                title: "Meetings", shortTitle: "Meetings", icon: "video",
+                spaces: filtered(store.meetingChats)),
+        ].filter { !$0.spaces.isEmpty }
+    }
+
     var body: some View {
-        List(selection: $store.selection) {
-            section("Direct Messages", filtered(store.directMessages))
-            section("Group Chats", filtered(store.groupChats))
-            section("Spaces", filtered(store.namedSpaces))
-            section("Meetings", filtered(store.meetingChats))
+        let sections = sections
+        ScrollViewReader { proxy in
+            List(selection: $store.selection) {
+                ForEach(sections) { section in
+                    Section(section.title) {
+                        ForEach(section.spaces) { space in
+                            SpaceRow(store: store, space: space, showsDate: showDates)
+                                .tag(space.name)
+                        }
+                    }
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if sections.count > 1 {
+                    jumpBar(sections, proxy)
+                }
+            }
         }
         .searchable(text: $search, placement: .sidebar, prompt: "Search")
         .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 400)
@@ -110,14 +148,41 @@ struct SidebarView: View {
         return spaces
     }
 
-    @ViewBuilder
-    private func section(_ title: String, _ spaces: [Space]) -> some View {
-        if !spaces.isEmpty {
-            Section(title) {
-                ForEach(spaces) { space in
-                    SpaceRow(store: store, space: space, showsDate: showDates)
-                        .tag(space.name)
+    /// Always-visible section names. Clicking one scrolls the list to that section.
+    private func jumpBar(_ sections: [SidebarSection], _ proxy: ScrollViewProxy) -> some View {
+        ViewThatFits(in: .horizontal) {
+            jumpButtons(sections, proxy, showsText: true)
+            jumpButtons(sections, proxy, showsText: false)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    private func jumpButtons(
+        _ sections: [SidebarSection], _ proxy: ScrollViewProxy, showsText: Bool
+    ) -> some View {
+        HStack(spacing: 4) {
+            ForEach(sections) { section in
+                Button {
+                    guard let first = section.spaces.first else { return }
+                    withAnimation { proxy.scrollTo(first.id, anchor: .top) }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: section.icon)
+                        if showsText { Text(section.shortTitle).fixedSize() }
+                    }
+                    .font(.caption.weight(.medium))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Scroll to \(section.title)")
+                if section.id != sections.last?.id { Spacer(minLength: 0) }
             }
         }
     }
