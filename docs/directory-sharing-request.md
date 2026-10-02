@@ -1,4 +1,4 @@
-# Request: let approved apps read the organization directory
+# Request: let internal apps read the organization directory
 
 Requested by: [name]. Date: [date].
 Needs: the Directory settings and Service Settings administrator privileges.
@@ -6,14 +6,13 @@ Needs: the Directory settings and Service Settings administrator privileges.
 
 ## The request
 
-Two changes, made together so that only approved apps gain directory access.
+Two changes, made together so that only apps built inside the organization
+gain directory access.
 
-1. Restrict which apps can read contacts and directory data.
-   Admin console > Security > Access and data control > API controls >
-   Manage Google Services: set Contacts to Restricted.
-   Then under Manage App Access, add this OAuth client and give it access
-   (Specific Google data limited to its scopes, or Trusted):
-   [client ID]
+1. Restrict contacts and directory data to internal apps.
+   Admin console > Security > Access and data control > API controls:
+   - Manage Google Services: set Contacts to Restricted.
+   - Tick "Trust internal apps".
 
 2. Turn on directory sharing for apps.
    Admin console > Directory > Directory settings > Sharing settings >
@@ -47,9 +46,12 @@ can take up to 24 hours to apply. It shares nothing with people outside the
 organization; "external" means apps other than Google's own.
 
 API controls (step 1). A service marked Restricted can be used only by apps
-an admin has configured as Trusted or as Specific Google data. Everything
-else is refused, whatever a user clicks on the consent screen. This turns
-the organization-wide directory setting into a per-app decision.
+that are trusted. "Trust internal apps" makes every internal app trusted. An
+internal app is one whose OAuth client is in a Google Cloud project owned by
+the organization, or an Apps Script project written by an employee. Apps
+from outside publishers are refused unless an admin approves them one by
+one, whatever a user clicks on the consent screen. Together the two changes
+mean: internal apps can read the directory, outside apps cannot.
 
 
 ## Risks of directory sharing
@@ -67,32 +69,55 @@ step 1:
 - Copied data cannot be recalled, and a current staff list with roles is
   useful for targeted phishing and impersonation.
 
-With step 1 in place these are limited to the apps that were approved.
+With step 1 in place, outside apps are shut out and these risks are limited
+to internal apps and to outside apps an admin has approved.
 
 
-## Risks of the API controls restriction
+## Risks of the API controls changes
+
+From restricting Contacts:
 
 - It can break apps people use today. Per Google, when a service becomes
   Restricted, installed apps that are not trusted stop working and their
   tokens are revoked. That may include contact sync on phones and in mail
-  clients, CRM and calendar tools, and Apps Script projects that read
-  contacts. Check the accessed-apps list under API controls first and
-  approve what should keep working.
-- It is ongoing work. New apps that need contacts have to be reviewed and
-  approved, and users will hit a "blocked by admin" message until they are.
-- Approval is by OAuth client ID and is only as good as the review. Trusted
-  grants access to every Google service, restricted or not; Specific Google
-  data limits an app to named scopes and is the safer choice.
-- "Trust internal apps" approves every app built inside the organization,
-  including scripts any employee writes. Leave it off unless that is
-  intended, and approve this client individually.
-- Restricting Contacts does not cover other data. Mail, Drive, Chat and
-  Calendar are separate services with their own Restricted setting.
+  clients, and CRM or calendar tools from outside publishers. Check the
+  accessed-apps list under API controls first and approve what should keep
+  working.
+- It is ongoing work. Outside apps that need contacts have to be reviewed
+  and approved, and users see a "blocked by admin" message until they are.
+- It covers contacts only. Mail, Drive, Chat and Calendar are separate
+  services with their own Restricted setting.
+
+From "Trust internal apps":
+
+- It trusts every internal app, not only this one. Any employee who can
+  create a Cloud project or an Apps Script project in the organization can
+  build an app that reads the directory, with no admin review.
+- It applies to every Restricted service, not only Contacts. If Gmail, Drive
+  or Chat are Restricted now or later, internal apps get those too.
+- The user still has to sign in and approve the permissions, and an internal
+  app only reaches the data of the people who do. But a careless or
+  malicious internal script that colleagues are persuaded to approve is not
+  stopped by this control.
+- An attacker who takes over an employee account could create an internal
+  app. That attacker can already read the directory through Google's own
+  apps, so the added exposure is speed and completeness of export.
+
+What narrows the internal-app risk:
+
+- Limit who can create Cloud projects in the organization (the Project
+  Creator role) and who can use Apps Script.
+- Set OAuth consent screens to Internal, so internal apps cannot be used by
+  outside accounts.
+- If trusting all internal apps is too broad, leave the box unticked and
+  approve this one client instead, under Manage App Access, with access set
+  to Specific Google data. Client ID: [client ID]
 
 To confirm before relying on step 1: that Contacts appears in the Manage
 Google Services list and that restricting it blocks the People API directory
 permission (directory.readonly). Google's help page does not list the
-services. A test with an unapproved app answers it. If Contacts cannot be
+services. A test with an outside app answers it. Also confirm the current
+state of "Trust internal apps"; it may already be ticked. If Contacts cannot be
 restricted, the alternative is the stricter setting for unconfigured apps,
 "Allow users to access third-party apps that only ask for Google sign-in
 info", which blocks every unapproved app from all Google data and has a much
@@ -111,11 +136,12 @@ larger impact.
 ## About the app
 
 Its OAuth client is in a Google Cloud project inside this organization with
-the consent screen set to Internal, so only our accounts can sign in. From
+the consent screen set to Internal, so it counts as an internal app and only
+our accounts can sign in. From
 the directory it reads names, emails and photos and keeps them on the user's
 Mac. It has no server and sends them nowhere else. It also uses Google Chat
-permissions, so if Chat is a Restricted service the same client needs to be
-approved for that too.
+permissions; with "Trust internal apps" ticked that keeps working even if
+Chat is a Restricted service.
 
 
 ## If the answer is no
