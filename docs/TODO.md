@@ -203,3 +203,52 @@ Then decide and build:
   would fix that.
 - Notifications only arrive while the app is running. Decide whether it
   should keep running without a window, or start at login.
+
+## Package the app for other employees in the organization
+
+Goal: a colleague downloads one file, drags GChat to Applications, opens it
+without security warnings, and signs in with their work account.
+
+Apple side:
+
+- Create a Developer ID Application certificate from the G2 Sub-CA
+  authority (developer.apple.com > Certificates). The old authority expires
+  on February 1, 2027, so do not issue from it. This Mac currently has only
+  an Apple Development certificate, which is not enough. Certificates from
+  the new authority expire yearly.
+- Release build signed with that certificate, with the hardened runtime
+  (already on) and a secure timestamp.
+- Notarize with Apple and staple the ticket. Needs an app-specific password
+  or an App Store Connect API key, kept out of the repository.
+- Package as a zip or disk image. Script the build, sign, notarize and
+  package steps so a release is one command.
+- Decide where colleagues download it from, and how they learn about new
+  versions. There is no updater; consider Sparkle if releases are frequent.
+
+Google side:
+
+- The work OAuth client is Internal to the organization, so colleagues can
+  sign in with it as is. Decide how they get the client ID: paste it by
+  hand (today), or build it into the organization's copy of the app so the
+  sign-in screen needs no input.
+- The bundle ID entered for the OAuth client must match the shipped app
+  (org.themullers.gchat today). Decide whether a work build should use a
+  work bundle ID and name.
+- Messages sent from the app show the Chat app name from the Cloud project
+  as an attribution label. Check the name is one the organization is happy
+  to see on messages.
+- If the organization restricts third-party or internal apps (Admin console
+  API controls), the client may need approving before colleagues can sign
+  in. See docs/directory-sharing-request.md for the directory setting,
+  which also decides whether New Conversation lists everyone.
+- Chat API quota is per Cloud project. Check the per-project limits against
+  the number of colleagues, since every copy polls every few seconds.
+
+Before handing it out:
+
+- A round of real use: notifications, sending, scrolling, group chats and
+  sign-out have not been reviewed on screen.
+- A short page for colleagues: what it is, what it stores (tokens in the
+  Keychain, names in preferences, no messages on disk), known limits, who to
+  ask, and that it is not a Google product.
+- Clear the plan with whoever owns IT or security at work.
