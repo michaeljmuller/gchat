@@ -136,6 +136,12 @@ After sign-in, in the app:
 - People show as "Unknown" and direct messages as "Direct Message". The
   People API is not enabled (step 2), or the organization has contact
   sharing turned off (Admin console > Directory > Directory settings).
+- The New Conversation sheet says the directory could not be loaded, with
+  "The G Suite domain admin has disabled external directory sharing". The
+  organization does not let apps read its directory. A Workspace admin can
+  allow it in the Admin console under Directory > Directory settings >
+  Sharing settings > External directory sharing. Until then the sheet lists
+  only people you already have a conversation with.
 - "Your sign-in has expired". The refresh token was revoked or, if the
   consent screen audience is External and in Testing, it expired after 7
   days. Use Internal (step 4).

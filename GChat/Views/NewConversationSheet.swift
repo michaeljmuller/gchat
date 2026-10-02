@@ -11,8 +11,8 @@ struct NewConversationSheet: View {
     @FocusState private var isSearchFocused: Bool
 
     private var people: [Profile] {
-        guard !query.isEmpty else { return store.directory }
-        return store.directory.filter {
+        guard !query.isEmpty else { return store.contacts }
+        return store.contacts.filter {
             ($0.displayName ?? "").localizedCaseInsensitiveContains(query)
                 || ($0.email ?? "").localizedCaseInsensitiveContains(query)
         }
@@ -20,7 +20,7 @@ struct NewConversationSheet: View {
 
     /// In directory order, including people the search currently hides.
     private var selected: [Profile] {
-        store.directory.filter { selection.contains($0.user) }
+        store.contacts.filter { selection.contains($0.user) }
     }
 
     var body: some View {
@@ -41,22 +41,36 @@ struct NewConversationSheet: View {
             .contextMenu(forSelectionType: String.self) { _ in
             } primaryAction: { users in
                 // Double-click or Return on a row.
-                start(store.directory.filter { users.contains($0.user) })
+                start(store.contacts.filter { users.contains($0.user) })
             }
             .overlay {
-                if store.directory.isEmpty {
+                if store.contacts.isEmpty {
                     ContentUnavailableView {
                         Label("No People Found", systemImage: "person.2.slash")
                     } description: {
-                        Text(store.directoryError.map { "The directory could not be loaded: \($0)" }
-                            ?? "Google returned an empty directory for your organization.")
-                            .textSelection(.enabled)
-                    } actions: {
-                        Button("Try Again") { Task { await store.reloadDirectory() } }
+                        Text(store.directoryError == nil
+                            ? "Google returned an empty directory for your organization."
+                            : "The directory is unavailable and there are no existing conversations to take people from.")
                     }
                 } else if people.isEmpty {
                     ContentUnavailableView.search(text: query)
                 }
+            }
+
+            if let error = store.directoryError {
+                Divider()
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Showing people from your existing conversations. The organization's directory could not be loaded:")
+                    Text(error).textSelection(.enabled)
+                    Button("Try Again") { Task { await store.reloadDirectory() } }
+                        .buttonStyle(.link)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
 
             Divider()
