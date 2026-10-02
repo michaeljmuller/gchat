@@ -113,8 +113,6 @@ struct NewConversationSheet: View {
                 Text(error)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
-                Button("Check Again") { Task { await store.reloadDirectory() } }
-                    .buttonStyle(.link)
             }
             .font(.callout)
             .fixedSize(horizontal: false, vertical: true)
