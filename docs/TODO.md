@@ -72,3 +72,16 @@ media download, whether thumbnailUri can be fetched with a token or only with
 browser cookies, and whether the API reports image dimensions.
 
 Related, not part of this item: sending images from the app (upload).
+
+## Give the app a proper icon
+
+The current icon is a placeholder drawn by a script: a green rounded square
+with a white speech bubble and three dots. The PNGs are in
+GChat/Assets.xcassets/AppIcon.appiconset.
+
+To do: design a real icon and replace those files. Keep the sizes listed in
+that folder's Contents.json (16 to 1024 pixels). Check how it looks in the
+Dock, in the app switcher, in notifications and at 16 pixels in Finder lists,
+in both light and dark appearance. Consider whether to supply the newer
+layered icon format that recent macOS versions use for tinted and clear
+icon styles.
