@@ -85,3 +85,48 @@ Dock, in the app switcher, in notifications and at 16 pixels in Finder lists,
 in both light and dark appearance. Consider whether to supply the newer
 layered icon format that recent macOS versions use for tinted and clear
 icon styles.
+
+## Research what makes an app "Mac-assed" and refactor to match
+
+The app is native SwiftUI, but it has not been checked against what long-time
+Mac users expect from a good Mac app. Research first, then refactor.
+
+Known example: the Settings window shows a scroll bar even though its content
+fits. See GChat/Views/SettingsView.swift (a grouped Form with a fixed width).
+
+Research:
+
+- Apple's Human Interface Guidelines for macOS: windows, sidebars, toolbars,
+  menus, settings, keyboard, notifications.
+- Writing on the subject by Mac developers and critics (the term comes from
+  Brent Simmons; John Gruber and others have written about what separates a
+  real Mac app from a port).
+- Reference apps to compare against side by side: Messages, Mail, Notes, and
+  well-regarded third-party apps.
+
+Things to check in this app, to be confirmed or replaced by the research:
+
+- Settings: no stray scroll bar, standard pane layout, toolbar tabs if it
+  grows, changes apply immediately.
+- Menus: every action reachable from the menu bar with a standard shortcut;
+  Edit, View and Window menus complete; items disabled when they do not
+  apply; contextual menus on sidebar rows and messages.
+- Keyboard: full keyboard navigation of sidebar and transcript, focus moving
+  predictably between sidebar, transcript and composer, Escape and Return
+  behaving as in system apps.
+- Windows: size, position and sidebar width restored on relaunch; sensible
+  minimum sizes; behaviour when the window is closed and the Dock icon is
+  clicked; whether more than one window should be possible.
+- Text: system text services in the composer (spelling, substitutions,
+  dictation, emoji picker, undo), selection and copy across messages,
+  Look Up and Services on message text, drag and drop of text.
+- Toolbar and sidebar: standard toolbar items, sidebar toggle, section
+  collapse state remembered, unread badges in the system style.
+- System integration: notification actions such as reply, Dock menu, Handoff
+  or Spotlight if they make sense, respecting Reduce Motion, Increase
+  Contrast and accent colour, VoiceOver labels.
+- Feel: no layout jumps, no spinners where cached content could show, scroll
+  position preserved, native materials, nothing that looks like a web page.
+
+Most of the UI has only been compiled and unit tested, not reviewed on
+screen, so expect to find more than is listed here.
