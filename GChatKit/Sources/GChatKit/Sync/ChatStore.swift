@@ -685,7 +685,22 @@ public final class ChatStore {
         }
         if space.singleUserBotDm == true {
             let app = members.compactMap(\.member).first { $0.isBot }
-            if let name = app?.displayName, !name.isEmpty { setTitle(name, for: space.name) }
+            if let name = app?.displayName, !name.isEmpty {
+                setTitle(name, for: space.name)
+                return
+            }
+            // The member list rarely names the app; its messages do.
+            let recent = (try? await chat.listMessages(
+                in: space.name, pageSize: 10, pageToken: nil, after: nil))?.messages ?? []
+            let senders = recent.compactMap(\.sender).filter(\.isBot)
+            Self.log.info("""
+                App conversation \(space.name, privacy: .public): member name \
+                \(app?.displayName ?? "none", privacy: .public), \(recent.count) recent messages, \
+                app senders: \(senders.map { $0.displayName ?? "unnamed" }.joined(separator: ", "), privacy: .public)
+                """)
+            if let name = senders.compactMap(\.displayName).first(where: { !$0.isEmpty }) {
+                setTitle(name, for: space.name)
+            }
             return
         }
         let others = members.compactMap(\.member).filter { $0.name != me?.user && !$0.isBot }

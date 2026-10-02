@@ -85,6 +85,27 @@ import Testing
         #expect(store.name(for: User(name: "users/gone", type: "HUMAN")) == "Deleted User")
     }
 
+    @Test func appConversationsAreNamedFromTheirMessages() async throws {
+        chat.update { state in
+            state.spaces = [
+                Space(name: "spaces/bot", spaceType: "DIRECT_MESSAGE", lastActiveTime: now, singleUserBotDm: true),
+            ]
+            state.members["spaces/bot"] = [Membership(member: User(name: "users/me-id", type: "HUMAN"))]
+            state.messages["spaces/bot"] = [
+                Message(
+                    name: "spaces/bot/messages/1",
+                    sender: User(name: "users/bot1", displayName: "Drive Bot", type: "BOT"),
+                    createTime: now, text: "A file was shared"),
+            ]
+        }
+        let store = ChatStore(chat: chat, people: FakePeople(), defaults: defaults)
+        await store.refreshSpaces()
+        let space = try #require(store.space(named: "spaces/bot"))
+        #expect(store.title(for: space) == "App")
+        #expect(await eventually { store.title(for: space) == "Drive Bot" })
+        #expect(!store.isWithDeletedUser(space))
+    }
+
     @Test func openingMarksRead() async throws {
         let store = await makeStore()
         #expect(await eventually { store.unreadCount == 1 })
