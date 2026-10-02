@@ -47,6 +47,8 @@ public final class ChatStore {
     public private(set) var connectionError: String?
     /// The organization's directory without the signed-in user, sorted by name.
     public private(set) var directory: [Profile] = []
+    /// Why the directory could not be loaded, when it could not.
+    public private(set) var directoryError: String?
     /// A failure the user should see once, such as not being able to start a conversation.
     public var alertMessage: String?
     public var selection: String? {
@@ -260,6 +262,21 @@ public final class ChatStore {
     public func refresh() async {
         await refreshSpaces()
         await loadDirectory()
+    }
+
+    /// People to offer for a new conversation: the organization's directory, or,
+    /// when that is unavailable, everyone already known from existing conversations.
+    public var contacts: [Profile] {
+        guard directoryError != nil else { return directory }
+        return profiles.values
+            .filter { $0.displayName != nil && $0.user != me?.user && !missingUsers.contains($0.user) }
+            .sorted {
+                ($0.displayName ?? "").localizedCaseInsensitiveCompare($1.displayName ?? "") == .orderedAscending
+            }
+    }
+
+    public func reloadDirectory() async {
+        await loadDirectory()
         if let selection { await open(selection) }
     }
 
@@ -411,7 +428,14 @@ public final class ChatStore {
     }
 
     private func loadDirectory() async {
-        guard let people = try? await people.listDirectory() else {
+        let people: [Profile]
+        do {
+            people = try await self.people.listDirectory()
+            directoryError = nil
+            Self.log.info("Directory: \(people.count) people")
+        } catch {
+            directoryError = error.localizedDescription
+            Self.log.error("Directory failed: \(String(describing: error), privacy: .public)")
             await refreshTitleProfiles()
             return
         }

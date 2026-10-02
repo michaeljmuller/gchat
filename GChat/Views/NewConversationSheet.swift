@@ -45,9 +45,15 @@ struct NewConversationSheet: View {
             }
             .overlay {
                 if store.directory.isEmpty {
-                    ContentUnavailableView(
-                        "No People Found", systemImage: "person.2.slash",
-                        description: Text("The organization's directory is empty or could not be loaded."))
+                    ContentUnavailableView {
+                        Label("No People Found", systemImage: "person.2.slash")
+                    } description: {
+                        Text(store.directoryError.map { "The directory could not be loaded: \($0)" }
+                            ?? "Google returned an empty directory for your organization.")
+                            .textSelection(.enabled)
+                    } actions: {
+                        Button("Try Again") { Task { await store.reloadDirectory() } }
+                    }
                 } else if people.isEmpty {
                     ContentUnavailableView.search(text: query)
                 }
