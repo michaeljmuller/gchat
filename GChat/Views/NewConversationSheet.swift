@@ -8,6 +8,7 @@ struct NewConversationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var selection: Set<String> = []
+    @State private var isWarningShown = false
     @FocusState private var isSearchFocused: Bool
 
     private var people: [Profile] {
@@ -26,7 +27,25 @@ struct NewConversationSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("New Conversation").font(.headline)
+                HStack {
+                    Text("New Conversation").font(.headline)
+                    Spacer()
+                    if store.directoryError != nil {
+                        Button {
+                            withAnimation { isWarningShown.toggle() }
+                        } label: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.yellow)
+                                .font(.title3)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Not everyone in your organization is listed")
+                        .accessibilityLabel("Directory warning")
+                    }
+                }
+                if isWarningShown, let error = store.directoryError {
+                    warningPanel(error)
+                }
                 TextField("Search people", text: $query)
                     .textFieldStyle(.roundedBorder)
                     .focused($isSearchFocused)
@@ -38,6 +57,7 @@ struct NewConversationSheet: View {
             List(people, id: \.user, selection: $selection) { person in
                 PersonRow(person: person)
             }
+            .environment(\.defaultMinListRowHeight, 22)
             .contextMenu(forSelectionType: String.self) { _ in
             } primaryAction: { users in
                 // Double-click or Return on a row.
@@ -55,22 +75,6 @@ struct NewConversationSheet: View {
                 } else if people.isEmpty {
                     ContentUnavailableView.search(text: query)
                 }
-            }
-
-            if let error = store.directoryError {
-                Divider()
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Showing people from your existing conversations. The organization's directory could not be loaded:")
-                    Text(error).textSelection(.enabled)
-                    Button("Try Again") { Task { await store.reloadDirectory() } }
-                        .buttonStyle(.link)
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
             }
 
             Divider()
@@ -94,6 +98,45 @@ struct NewConversationSheet: View {
         .onAppear { isSearchFocused = true }
     }
 
+    /// Explains why the list is incomplete. Closed with its own button or by
+    /// clicking the warning icon again.
+    private func warningPanel(_ error: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(store.isDirectoryBlocked
+                    ? """
+                      You can only start chats with people you've already chatted with. To list \
+                      everyone, ask your Google Workspace admin to set External Directory sharing \
+                      to "Organization data".
+                      """
+                    : "The organization's directory could not be loaded, so only people from your existing conversations are listed.")
+                Text(error)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                Button("Check Again") { Task { await store.reloadDirectory() } }
+                    .buttonStyle(.link)
+            }
+            .font(.callout)
+            .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Button {
+                withAnimation { isWarningShown = false }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .padding(4)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Close")
+            .accessibilityLabel("Close")
+        }
+        .padding(10)
+        .background(.yellow.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
+        .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(.yellow.opacity(0.4)) }
+    }
+
     private var summary: String {
         let names = selected.map { $0.displayName ?? $0.email ?? "Unknown" }
         switch names.count {
@@ -115,18 +158,17 @@ private struct PersonRow: View {
 
     var body: some View {
         let name = person.displayName ?? person.email ?? "Unknown"
-        HStack(spacing: 10) {
-            AvatarView(url: person.photoURL, name: name, size: 28)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(name).lineLimit(1)
-                if let email = person.email, person.displayName != nil {
-                    Text(email)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+        HStack(spacing: 8) {
+            AvatarView(url: person.photoURL, name: name, size: 18)
+            Text(name).lineLimit(1)
+            if let email = person.email, person.displayName != nil {
+                Text(email)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
+            Spacer(minLength: 0)
         }
-        .padding(.vertical, 2)
     }
 }
