@@ -49,6 +49,9 @@ public final class ChatStore {
     public private(set) var directory: [Profile] = []
     /// Why the directory could not be loaded, when it could not.
     public private(set) var directoryError: String?
+    /// True when Google refused the directory request as not permitted, as opposed
+    /// to a network or other temporary failure.
+    public private(set) var isDirectoryBlocked = false
     /// A failure the user should see once, such as not being able to start a conversation.
     public var alertMessage: String?
     public var selection: String? {
@@ -432,9 +435,11 @@ public final class ChatStore {
         do {
             people = try await self.people.listDirectory()
             directoryError = nil
+            isDirectoryBlocked = false
             Self.log.info("Directory: \(people.count) people")
         } catch {
             directoryError = error.localizedDescription
+            isDirectoryBlocked = (error as? APIError)?.status == 403
             Self.log.error("Directory failed: \(String(describing: error), privacy: .public)")
             await refreshTitleProfiles()
             return

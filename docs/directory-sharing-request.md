@@ -31,7 +31,6 @@ with my own sign-in. To start a conversation with a colleague it lists the
 people in the organization through the People API. Google currently refuses
 that call ("The G Suite domain admin has disabled external directory
 sharing"), so the app only lists people I already have a conversation with.
-Everything else in the app works without this change.
 
 
 ## What each change does

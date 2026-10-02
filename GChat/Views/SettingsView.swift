@@ -48,6 +48,25 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            if let store = model.store, store.isDirectoryBlocked {
+                Section {
+                    Label {
+                        Text("""
+                            You can only start chats with people you've already chatted with. \
+                            To list everyone, ask your Google Workspace admin to set External \
+                            Directory sharing to "Organization data".
+                            """)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.yellow)
+                    }
+                    Button("Check Again") { Task { await store.reloadDirectory() } }
+                } header: {
+                    Text("Directory Access")
+                }
+            }
+
             Section("Sidebar") {
                 Picker("Sort conversations", selection: $sidebarSort) {
                     ForEach(SidebarSort.allCases) { Text($0.label).tag($0) }
