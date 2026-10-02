@@ -395,6 +395,7 @@ public final class ChatStore {
         }
         transcripts[name] = transcript
         resolveProfiles(in: messages)
+        adoptAppTitle(from: messages, for: name)
         bumpActivity(of: name, to: transcript.messages.last?.createTime)
     }
 
@@ -474,8 +475,7 @@ public final class ChatStore {
     /// Direct messages and group chats have no name of their own; build one from the members.
     private func resolveTitles() async {
         let untitled = spaces.filter {
-            ($0.displayName ?? "").isEmpty && $0.singleUserBotDm != true
-                && titles[$0.name] == nil && !titleAttempts.contains($0.name)
+            ($0.displayName ?? "").isEmpty && titles[$0.name] == nil && !titleAttempts.contains($0.name)
         }
         guard !untitled.isEmpty else { return }
         for space in untitled { titleAttempts.insert(space.name) }
@@ -485,6 +485,11 @@ public final class ChatStore {
     private func resolveTitle(_ space: Space) async {
         guard let members = try? await chat.listMembers(of: space.name) else {
             titleAttempts.remove(space.name)
+            return
+        }
+        if space.singleUserBotDm == true {
+            let app = members.compactMap(\.member).first { $0.isBot }
+            if let name = app?.displayName, !name.isEmpty { setTitle(name, for: space.name) }
             return
         }
         let others = members.compactMap(\.member).filter { $0.name != me?.user && !$0.isBot }
@@ -507,13 +512,27 @@ public final class ChatStore {
         }
         guard !names.isEmpty else { return }
         if space.kind == .directMessage {
-            titles[space.name] = names[0]
+            setTitle(names[0], for: space.name)
         } else {
-            titles[space.name] = names
-                .map { $0.split(separator: " ").first.map(String.init) ?? $0 }
-                .joined(separator: ", ")
+            setTitle(
+                names.map { $0.split(separator: " ").first.map(String.init) ?? $0 }.joined(separator: ", "),
+                for: space.name)
         }
+    }
+
+    private func setTitle(_ title: String, for name: String) {
+        titles[name] = title
         defaults.set(titles, forKey: Keys.titles)
+    }
+
+    /// A direct message with a Chat app takes the app's name from its messages
+    /// when the member list did not provide one.
+    private func adoptAppTitle(from messages: [Message], for name: String) {
+        guard titles[name] == nil, space(named: name)?.singleUserBotDm == true,
+              let appName = messages.lazy.compactMap(\.sender).first(where: { $0.isBot })?.displayName,
+              !appName.isEmpty
+        else { return }
+        setTitle(appName, for: name)
     }
 
     // MARK: - Helpers
