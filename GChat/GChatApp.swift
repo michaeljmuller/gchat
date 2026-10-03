@@ -40,6 +40,9 @@ struct AppCommands: Commands {
     let model: AppModel
 
     var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About GChat") { AboutPanel.show() }
+        }
         CommandGroup(replacing: .newItem) {
             Button("New Conversation…") { model.isNewConversationShown = true }
                 .keyboardShortcut("n")

@@ -6,5 +6,11 @@
 	<string>$(GCHAT_CLIENT_ID)</string>
 	<key>GChatOrganization</key>
 	<string>$(GCHAT_ORGANIZATION)</string>
+	<key>GChatCommit</key>
+	<string>$(GCHAT_COMMIT)</string>
+	<key>GChatBuildDate</key>
+	<string>$(GCHAT_BUILD_DATE)</string>
+	<key>GChatSourceURL</key>
+	<string>$(GCHAT_SOURCE_URL)</string>
 </dict>
 </plist>

@@ -10,7 +10,7 @@ IT. Questions go to Mike Muller.
 
 ## Install
 
-1. Open GChat-VERSION.dmg.
+1. Open the GChat disk image (GChat-<version>.dmg).
 2. Drag GChat onto the Applications folder.
 3. Open GChat from Applications. The first time, macOS asks whether to open
    an app downloaded from the internet; choose Open.

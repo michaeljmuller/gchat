@@ -1,10 +1,12 @@
 #!/bin/bash
 # Builds a signed, notarized disk image of GChat for other people.
 #
-#   scripts/release.sh VERSION [--no-notarize]
+#   scripts/release.sh [--no-notarize]
 #
-# VERSION is the version people see, such as 1.0. The build number is the
-# number of commits, so every release from a new commit is higher.
+# The version shown in the About window is the commit ID, with "-modified"
+# added when there are uncommitted changes. The build number is the number of
+# commits; macOS uses it to tell which copy is newer, so it is also the
+# version macOS and Finder show.
 #
 # Needs: the Developer ID Application certificate in the login keychain, and
 # notarization credentials stored with
@@ -12,22 +14,24 @@
 # (set NOTARY_PROFILE to use another name). Config/Local.xcconfig decides
 # which organization's client ID is built in.
 #
-# The result is build/release/GChat-VERSION.dmg.
+# The result is build/release/GChat-COMMIT.dmg.
 
 set -euo pipefail
 
-version=${1:?usage: scripts/release.sh VERSION [--no-notarize]}
 notarize=yes
-[ "${2:-}" = "--no-notarize" ] && notarize=no
+[ "${1:-}" = "--no-notarize" ] && notarize=no
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 out=build/release
 profile=${NOTARY_PROFILE:-gchat-notary}
 build_number=$(git rev-list --count HEAD)
+version=$(git rev-parse --short HEAD)
+build_date=$(date +%Y-%m-%d)
 
 if [ -n "$(git status --porcelain)" ]; then
     echo "warning: uncommitted changes; the release will not match any commit" >&2
+    version="$version-modified"
 fi
 if [ -f Config/Local.xcconfig ]; then
     echo "Built-in organization: $(sed -n 's/^GCHAT_ORGANIZATION *= *//p' Config/Local.xcconfig)"
@@ -42,7 +46,8 @@ echo "Building version $version ($build_number)"
 xcodebuild -project GChat.xcodeproj -scheme GChat -configuration Release \
     -destination "generic/platform=macOS" \
     -derivedDataPath build/release-derived -archivePath "$out/GChat.xcarchive" \
-    MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="$build_number" \
+    MARKETING_VERSION="$build_number" CURRENT_PROJECT_VERSION="$build_number" \
+    GCHAT_COMMIT="$version" GCHAT_BUILD_DATE="$build_date" \
     -quiet archive
 
 echo "Signing with Developer ID"

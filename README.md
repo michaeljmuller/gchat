@@ -169,6 +169,11 @@ From the command line:
 The app is then at build/Build/Products/Release/GChat.app. Copy it to
 /Applications.
 
+To make a signed, notarized disk image for other people, run
+scripts/release.sh; see the comments at its top for what it needs. The
+About window shows the commit the release was built from, the build number
+(the number of commits) and the build date.
+
 To build a copy for an organization with its OAuth client ID built in, copy
 Config/Local.xcconfig.example to Config/Local.xcconfig and fill in the client
 ID and organization name. That file is not committed. A build with a
