@@ -383,7 +383,7 @@ public final class ChatStore {
         } catch let error as APIError where error.status == 403 {
             alertMessage = "Could not start the conversation: \(error.message)\n\n"
                 + "If this mentions scopes or permissions, add the chat.spaces.create scope "
-                + "in the Google Cloud console (see the README), then sign out and sign in again."
+                + "in the Google Cloud console (see docs/google-cloud-setup.md), then sign out and sign in again."
         } catch {
             report(error)
             alertMessage = "Could not start the conversation: \(error.localizedDescription)"

@@ -17,7 +17,7 @@ struct SignInView: View {
                 .font(.title2.weight(.semibold))
 
             if showsClientID {
-                Text("Paste the OAuth client ID from your organization's Google Cloud project. The README explains how to create one.")
+                Text("Paste the OAuth client ID from your organization's Google Cloud project. github.com/michaeljmuller/gchat explains how to create one.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)

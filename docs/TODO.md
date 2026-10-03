@@ -20,7 +20,7 @@ What it would take:
 
 - Cloud setup per organization: enable the Workspace Events API and Pub/Sub,
   create a topic, grant Google Chat permission to publish to it, create a
-  pull subscription. Add these steps to the README walkthrough.
+  pull subscription. Add these steps to docs/google-cloud-setup.md.
 - More OAuth scopes: one for Pub/Sub so the app can pull as the user, plus
   whatever the Workspace Events API requires for Chat message events.
   Existing users would have to sign in again.
@@ -149,7 +149,7 @@ What it would take:
 - Transcript performance with thousands of messages: check that the lazy
   list stays smooth and that row grouping is not recomputed for the whole
   conversation on every change.
-- Storing messages on disk changes the privacy note in the README, which
+- Storing messages on disk changes the privacy note in docs/how-it-works.md, which
   says messages are kept in memory only. Decide where the file lives and
   that Sign Out deletes it.
 
