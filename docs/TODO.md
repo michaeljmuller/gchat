@@ -306,3 +306,60 @@ Batching, looked into October 2026:
   work it returns none.
 - The bigger saving is to make fewer member-list calls at all: only for
   conversations on screen, and never again once the members are cached.
+
+## Automatic updates (Sparkle), on a host shared by several apps
+
+Today people only get a new version if they download it again. Sparkle is
+the standard updater for Mac apps outside the App Store: the app checks a
+feed (the appcast), shows "A new version is available", downloads, verifies
+and installs it.
+
+Sparkle needs, at fixed HTTPS addresses reachable without signing in:
+
+- the appcast, an XML file listing the releases;
+- the update files (disk images or zips).
+
+Google Drive shared with the organization does not work for this, since the
+app cannot sign in to Google to download.
+
+Make the location generic, so other Mac apps can use it too. One host, one
+folder per app:
+
+    https://<updates host>/<app>/appcast.xml
+    https://<updates host>/<app>/<app>-<build>.dmg
+
+Hosting choices:
+
+- A public bucket in Hetzner object storage. No server process; fits the
+  existing setup. Likely the best fit for a shared endpoint.
+- A static site on the Hetzner host behind Caddy. Needs a deployment change,
+  which is the release manager's job.
+- GitHub Releases plus GitHub Pages. Free and versioned, but per repository,
+  so it is less suited to one endpoint for several apps.
+
+Whatever is chosen is public to anyone with the address. This app's work
+build carries the Zia Consulting client ID and name; the client is Internal,
+so only Zia accounts can sign in, and the ID is not a secret. Decide whether
+that is acceptable before publishing the Zia build there.
+
+In this app:
+
+- Add Sparkle as a Swift package (the app's first third-party dependency).
+- Add "Check for Updates…" to the app menu and an automatic-check setting.
+- Put the appcast address and Sparkle's public key in the build settings
+  (Config/Base.xcconfig), like the source link.
+- Sparkle checks the Developer ID signature of an update and its own EdDSA
+  signature; the update must keep the same bundle ID and team.
+
+Shared tooling, reusable by every app:
+
+- One script that takes an app's notarized disk image, signs it with
+  Sparkle's sign_update, uploads it to <host>/<app>/, and regenerates that
+  app's appcast (Sparkle's generate_appcast). scripts/release.sh would call
+  it. Keep it in its own repository or as a template other projects copy.
+- Signing keys: Sparkle's generate_keys stores the private key in the login
+  keychain under an account name. Prefer one key per app (--account <app>)
+  so that a leaked key affects one app only. Back the keys up; losing one
+  means that app can no longer ship updates its installed copies accept.
+- Upload credentials for the bucket stay outside the repositories.
+- Release notes: optional HTML per release, shown in the update window.
