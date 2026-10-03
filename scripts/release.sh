@@ -40,6 +40,7 @@ mkdir -p "$out"
 
 echo "Building version $version ($build_number)"
 xcodebuild -project GChat.xcodeproj -scheme GChat -configuration Release \
+    -destination "generic/platform=macOS" \
     -derivedDataPath build/release-derived -archivePath "$out/GChat.xcarchive" \
     MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="$build_number" \
     -quiet archive
