@@ -145,6 +145,19 @@ import Testing
         #expect(store.name(for: User(name: "users/cy", type: "HUMAN")) == "Cy Example")
     }
 
+    @Test func tooManyRequestsIsReportedAndClearsAfterSuccess() async throws {
+        let store = await makeStore()
+        chat.update { $0.throttled = true }
+        await store.refreshSpaces()
+        #expect(store.connectionError?.hasPrefix("Google asked GChat to slow down") == true)
+        // The conversation list from before stays.
+        #expect(store.spaces.count == 2)
+
+        chat.update { $0.throttled = false }
+        await store.refreshSpaces()
+        #expect(store.connectionError == nil)
+    }
+
     @Test func openingMarksRead() async throws {
         let store = await makeStore()
         #expect(await eventually { store.unreadCount == 1 })

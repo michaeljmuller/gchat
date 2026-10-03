@@ -259,7 +259,7 @@ public final class ChatStore {
         while !Task.isCancelled {
             try? await Task.sleep(for: isAppActive ? Self.activeInterval : Self.inactiveInterval)
             if Task.isCancelled { break }
-            guard isOnline else { continue }
+            guard isOnline, !isPaused else { continue }
             tick += 1
             if phase != .ready {
                 await refreshSpaces()
@@ -307,6 +307,7 @@ public final class ChatStore {
             }
             var list = try await chat.listSpaces()
             connectionError = nil
+            backoffLevel = 0
             let listed = Set(list.map(\.name))
             localSpaces = localSpaces.filter { !listed.contains($0.key) }
             list += localSpaces.values
@@ -644,7 +645,14 @@ public final class ChatStore {
     }
 
     private func refreshReadState(_ name: String) async {
-        guard let state = try? await chat.readState(for: name) else { return }
+        guard !isPaused else { return }
+        let state: SpaceReadState
+        do {
+            state = try await chat.readState(for: name)
+        } catch {
+            if (error as? APIError)?.status == 429 { report(error) }
+            return
+        }
         // The local marker may be ahead of the server right after marking read.
         readTimes[name] = max(readTimes[name] ?? .distantPast, state.lastReadTime ?? .distantPast)
         reportUnread()
@@ -766,7 +774,16 @@ public final class ChatStore {
     }
 
     private func resolveTitle(_ space: Space) async {
-        guard let members = try? await chat.listMembers(of: space.name) else {
+        // Skipped items are picked up by the next refresh of the conversation list.
+        guard !isPaused else {
+            titleAttempts.remove(space.name)
+            return
+        }
+        let members: [Membership]
+        do {
+            members = try await chat.listMembers(of: space.name)
+        } catch {
+            if (error as? APIError)?.status == 429 { report(error) }
             titleAttempts.remove(space.name)
             return
         }
@@ -847,8 +864,33 @@ public final class ChatStore {
 
     // MARK: - Helpers
 
+    // MARK: - Backing off
+
+    /// Set when Google answers 429 (too many requests). Polling and background
+    /// lookups stop until then.
+    @ObservationIgnored private var pausedUntil: Date?
+    @ObservationIgnored private var backoffLevel = 0
+
+    private var isPaused: Bool {
+        if let pausedUntil, pausedUntil > Date() { return true }
+        return false
+    }
+
+    /// Doubles the pause on each consecutive 429, from 2 seconds up to about a
+    /// minute, with some randomness so many copies do not retry in step.
+    private func backOff() {
+        backoffLevel = min(backoffLevel + 1, 6)
+        let delay = pow(2, Double(backoffLevel)) + Double.random(in: 0...1)
+        pausedUntil = Date().addingTimeInterval(delay)
+        connectionError = "Google asked GChat to slow down. Retrying in \(Int(delay.rounded())) seconds."
+    }
+
     private func report(_ error: Error) {
         if error is CancellationError { return }
+        if let error = error as? APIError, error.status == 429 {
+            backOff()
+            return
+        }
         if let error = error as? AuthError, error == .reauthRequired {
             stop()
             onAuthFailure?()
@@ -862,19 +904,31 @@ public final class ChatStore {
         }
     }
 
-    /// Runs `body` for each item with at most four requests in flight.
+    /// Pause between background requests from one worker. With four workers
+    /// this keeps startup lookups to about ten requests a second.
+    nonisolated static let requestSpacing = Duration.milliseconds(400)
+
+    /// Runs `body` for each item with at most four requests in flight, paced
+    /// by `requestSpacing`. Used for the lookups at startup.
     private func forEachLimited<Item: Sendable>(
         _ items: [Item], _ body: @escaping @MainActor @Sendable (Item) async -> Void
     ) async {
+        let spacing = Self.requestSpacing
         await withTaskGroup(of: Void.self) { group in
             var iterator = items.makeIterator()
             for _ in 0..<4 {
                 guard let item = iterator.next() else { break }
-                group.addTask { await body(item) }
+                group.addTask {
+                    await body(item)
+                    try? await Task.sleep(for: spacing)
+                }
             }
             while await group.next() != nil {
                 if let item = iterator.next() {
-                    group.addTask { await body(item) }
+                    group.addTask {
+                        await body(item)
+                        try? await Task.sleep(for: spacing)
+                    }
                 }
             }
         }

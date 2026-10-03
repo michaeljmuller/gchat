@@ -70,6 +70,9 @@ final class FakeChat: ChatService, @unchecked Sendable {
         var readTimes: [String: Date] = [:]
         var members: [String: [Membership]] = [:]
         var sendFails = false
+        /// Every conversation list request answers 429 while this is set.
+        var throttled = false
+        var listCalls = 0
         var markedRead: [String] = []
         /// Direct messages that exist on the server but have no messages, keyed by user.
         var existingDMs: [String: Space] = [:]
@@ -86,7 +89,11 @@ final class FakeChat: ChatService, @unchecked Sendable {
     var markedRead: [String] { update { $0.markedRead } }
 
     func listSpaces() async throws -> [Space] {
-        update { $0.spaces }
+        try update { state in
+            state.listCalls += 1
+            if state.throttled { throw APIError(status: 429, message: "Too many requests", code: "RESOURCE_EXHAUSTED") }
+            return state.spaces
+        }
     }
 
     func listMessages(in space: String, pageSize: Int, pageToken: String?, after: Date?) async throws -> MessagePage {
