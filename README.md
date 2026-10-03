@@ -169,6 +169,11 @@ From the command line:
 The app is then at build/Build/Products/Release/GChat.app. Copy it to
 /Applications.
 
+Debug builds use a separate icon with an orange hammer badge, so a
+development copy is easy to tell from a release. It is generated from the
+normal icon by scripts/make-dev-icon.swift; run that again after changing
+the icon.
+
 To make a signed, notarized disk image for other people, run
 scripts/release.sh; see the comments at its top for what it needs. The
 About window shows the commit the release was built from, the build number
