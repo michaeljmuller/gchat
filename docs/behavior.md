@@ -1,9 +1,8 @@
 # Behavior
 
 What GChat does, from the side of the person who uses it, for users,
-reviewers and testers. Why it is built
-this way is in design.md. The requests behind each feature are in
-requirements.md.
+reviewers and testers. Why it is built this way is in design.md. The
+requests behind each feature are in requirements.md.
 
 
 ## Sign-in
