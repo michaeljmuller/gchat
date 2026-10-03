@@ -1,153 +1,165 @@
 # Request: let internal apps read the organization directory
 
+A request to the Google Workspace admins of an organization, from a person
+who uses GChat. Why GChat needs the directory is in design.md.
+
 Requested by: [name]. Date: [date].
-Needs: the Directory settings and Service Settings administrator privileges.
+Needs: the administrator privileges Directory settings and Service Settings.
 
 
 ## The request
 
-Two changes, made together so that only apps built inside the organization
-gain directory access.
+The request is two changes, made together, so that only apps built inside
+the organization can read the directory.
 
-1. Restrict contacts and directory data to internal apps.
-   Admin console > Security > Access and data control > API controls:
-   - Manage Google Services: set Contacts to Restricted.
-   - Tick "Trust internal apps".
+1. Restrict contacts and directory data to internal apps. In the Admin
+   console, go to Security > Access and data control > API controls:
+   - In Manage Google Services, set Contacts to Restricted.
+   - Select "Trust internal apps".
+2. Let apps read the directory. In the Admin console, go to Directory >
+   Directory settings > Sharing settings > External Directory sharing.
+   Change "Authenticated user basic profile fields" to "Organization data and
+   authenticated user basic profile fields".
 
-2. Turn on directory sharing for apps.
-   Admin console > Directory > Directory settings > Sharing settings >
-   External Directory sharing: change "Authenticated user basic profile
-   fields" to "Organization data and authenticated user basic profile
-   fields".
-
-Do step 1 first. Step 2 without step 1 opens the directory to any app an
-employee approves.
+Do step 1 first. Without step 1, step 2 lets any app that an employee
+approves read the directory.
 
 
-## Why
+## Reason
 
-I use a native Mac client for Google Chat that calls Google's public APIs
-with my own sign-in. To start a conversation with a colleague it lists the
-people in the organization through the People API. Google currently refuses
-that call ("The G Suite domain admin has disabled external directory
-sharing"), so the app only lists people I already have a conversation with.
+GChat is a Mac app for Google Chat. It uses the public APIs of Google with
+the sign-in of the person who uses it. To start a conversation, it lists the
+people in the organization through the People API. Google refuses that call
+with "The G Suite domain admin has disabled external directory sharing". So
+GChat lists only people who already have a conversation with the requester.
 
 
 ## What each change does
 
-Directory sharing (step 2). Today a third-party app can read only the
-signed-in user's own name, photo and email. After the change, an app that a
-user has signed in to and granted a directory or contacts permission can
-read the directory that user already sees in Gmail and Contacts. Per Google,
-this applies to the People, CardDAV and Contacts APIs, never includes
-personal contacts, private profile data, or suspended or deleted users, and
-can take up to 24 hours to apply. It shares nothing with people outside the
-organization; "external" means apps other than Google's own.
+Directory sharing (step 2): today, a third-party app can read only the name,
+photo and email address of the signed-in user. After the change, an app can
+read the directory that the user already sees in Gmail and Contacts. The
+user must first sign in to the app and allow a directory or contacts
+permission.
 
-API controls (step 1). A service marked Restricted can be used only by apps
-that are trusted. "Trust internal apps" makes every internal app trusted. An
-internal app is one whose OAuth client is in a Google Cloud project owned by
-the organization, or an Apps Script project written by an employee. Apps
-from outside publishers are refused unless an admin approves them one by
-one, whatever a user clicks on the consent screen. Together the two changes
-mean: internal apps can read the directory, outside apps cannot.
+According to Google, the setting:
+
+- It applies to the People API, the CardDAV API and the Contacts API.
+- It never shares personal contacts, private profile data, or suspended or
+  deleted users.
+- It takes up to 24 hours to apply.
+- It shares nothing with people outside the organization. "External" means
+  apps that are not from Google.
+
+API controls (step 1): only trusted apps can use a service marked
+Restricted. "Trust internal apps" makes every internal app trusted. An
+internal app has its OAuth client in a Google Cloud project of the
+organization, or is an Apps Script project of an employee. An admin must
+approve each app from an outside publisher. The consent screen cannot
+override this.
+
+Together, the two changes give the directory to internal apps and keep it
+from outside apps.
 
 
 ## Risks of directory sharing
 
-The setting is organization-wide and has no per-app list of its own. Without
-step 1:
+The setting applies to the whole organization and has no list of apps.
+Without step 1:
 
-- Any app an employee approves, including apps from outside publishers, can
-  copy the whole directory: names, emails, photos and any other published
-  fields such as titles, phone numbers and managers.
-- Consent phishing gets more valuable. Tricking one employee into approving
-  an app yields the directory, where today it yields one profile.
-- One compromised account or stolen app token can export the directory
-  quickly and completely through the API.
-- Copied data cannot be recalled, and a current staff list with roles is
-  useful for targeted phishing and impersonation.
+- Any app that an employee approves can copy the whole directory. That
+  includes apps from outside publishers. The directory has names, email
+  addresses, photos and other published fields, for example titles, phone
+  numbers and managers.
+- Consent phishing gets more valuable. An attacker who tricks one employee
+  into approving an app gets the directory, not only one profile.
+- One compromised account or stolen token can export the whole directory
+  quickly through the API.
+- Copied data cannot be recalled. A current staff list with roles helps
+  targeted phishing and impersonation.
 
-With step 1 in place, outside apps are shut out and these risks are limited
-to internal apps and to outside apps an admin has approved.
+With step 1, these risks apply only to internal apps and to outside apps
+that an admin approved.
 
 
 ## Risks of the API controls changes
 
-From restricting Contacts:
+Restricting Contacts:
 
-- It can break apps people use today. Per Google, when a service becomes
-  Restricted, installed apps that are not trusted stop working and their
-  tokens are revoked. That may include contact sync on phones and in mail
-  clients, and CRM or calendar tools from outside publishers. Check the
-  accessed-apps list under API controls first and approve what should keep
-  working.
-- It is ongoing work. Outside apps that need contacts have to be reviewed
-  and approved, and users see a "blocked by admin" message until they are.
+- It can stop apps that people use today. According to Google, apps that
+  are not trusted stop working when a service becomes Restricted, and Google
+  revokes their tokens. Examples are contact sync on phones and in mail
+  apps, and outside CRM or calendar tools. Before the change, look at the
+  list of accessed apps in API controls and approve the apps that must
+  continue to work.
+- It adds work. An admin must review each outside app that needs contacts.
+  Until then, users see a "blocked by admin" message.
 - It covers contacts only. Mail, Drive, Chat and Calendar are separate
-  services with their own Restricted setting.
+  services, each with its own Restricted setting.
 
-From "Trust internal apps":
+"Trust internal apps":
 
-- It trusts every internal app, not only this one. Any employee who can
-  create a Cloud project or an Apps Script project in the organization can
-  build an app that reads the directory, with no admin review.
+- It trusts every internal app, not only GChat. An employee who can make a
+  Cloud project or an Apps Script project can build an app that reads the
+  directory, with no admin review.
 - It applies to every Restricted service, not only Contacts. If Gmail, Drive
-  or Chat are Restricted now or later, internal apps get those too.
-- The user still has to sign in and approve the permissions, and an internal
-  app only reaches the data of the people who do. But a careless or
-  malicious internal script that colleagues are persuaded to approve is not
-  stopped by this control.
-- An attacker who takes over an employee account could create an internal
-  app. That attacker can already read the directory through Google's own
-  apps, so the added exposure is speed and completeness of export.
+  or Chat is Restricted now or later, internal apps get those services too.
+- Each user must still sign in and allow the permissions, and an internal
+  app gets only the data of those users. But this control does not stop a
+  careless or malicious internal script that colleagues approve.
+- An attacker who takes over an employee account can make an internal app.
+  That attacker can already read the directory in Google's own apps. The
+  added risk is a fast and complete export.
 
-What narrows the internal-app risk:
+These steps reduce the risk from internal apps:
 
-- Limit who can create Cloud projects in the organization (the Project
-  Creator role) and who can use Apps Script.
-- Set OAuth consent screens to Internal, so internal apps cannot be used by
-  outside accounts.
-- If trusting all internal apps is too broad, leave the box unticked and
-  approve this one client instead, under Manage App Access, with access set
-  to Specific Google data. Client ID: [client ID]
+- Limit who can make Cloud projects in the organization (the Project Creator
+  role) and who can use Apps Script.
+- Set the consent screen of internal apps to Internal, so that outside
+  accounts cannot use them.
+- If "Trust internal apps" is too broad, leave it off and approve only the
+  GChat client, in Manage App Access, with access set to Specific Google
+  data. Client ID: [client ID]
 
-To confirm before relying on step 1: that Contacts appears in the Manage
-Google Services list and that restricting it blocks the People API directory
-permission (directory.readonly). Google's help page does not list the
-services. A test with an outside app answers it. Also confirm the current
-state of "Trust internal apps"; it may already be ticked. If Contacts cannot be
-restricted, the alternative is the stricter setting for unconfigured apps,
-"Allow users to access third-party apps that only ask for Google sign-in
-info", which blocks every unapproved app from all Google data and has a much
-larger impact.
+Not verified yet:
 
+- That Contacts is in the list in Manage Google Services, and that
+  restricting it blocks the directory permission of the People API
+  (directory.readonly). Google's help page does not list the services. A
+  test with an outside app answers the question.
+- The current state of "Trust internal apps". It can already be on.
 
-## Other mitigations
-
-- Review what the directory publishes and remove fields that should not be
-  widely available before step 2.
-- Review the OAuth token audit log after the change and periodically.
-- Both changes are reversible. Reverting stops further access but does not
-  recall data already copied.
+If Contacts cannot be restricted, there is a stricter setting for apps that
+are not configured: "Allow users to access third-party apps that only ask
+for Google sign-in info". It blocks all Google data from every app that is
+not approved, so its impact is much larger.
 
 
-## About the app
+## Other ways to reduce risk
 
-Its OAuth client is in a Google Cloud project inside this organization with
-the consent screen set to Internal, so it counts as an internal app and only
-our accounts can sign in. From
-the directory it reads names, emails and photos and keeps them on the user's
-Mac. It has no server and sends them nowhere else. It also uses Google Chat
-permissions; with "Trust internal apps" ticked that keeps working even if
-Chat is a Restricted service.
+- Before step 2, look at the fields that the directory publishes, and remove
+  fields that must not be widely available.
+- After the change, and from time to time, review the OAuth token audit log.
+- Both changes can be reverted. A revert stops further access but does not
+  recall data that was already copied.
+
+
+## About GChat
+
+The OAuth client of GChat is in a Google Cloud project of the organization,
+and its consent screen is Internal. So GChat is an internal app, and only
+accounts of the organization can sign in. GChat reads names, email addresses
+and photos from the directory and keeps them on the user's Mac. It has no
+server and sends them nowhere else. GChat also uses Google Chat permissions.
+With "Trust internal apps" on, these continue to work if Chat becomes a
+Restricted service.
 
 
 ## If the answer is no
 
-The app keeps working. New conversations can be started with anyone I already
-have one with; a first message to someone new has to be sent from
-chat.google.com.
+GChat continues to work. It can start conversations with people who already
+have a conversation with the requester. The first message to anyone else
+must go through chat.google.com.
 
 
 ## References
@@ -159,6 +171,5 @@ chat.google.com.
 - People API, people.listDirectoryPeople:
   https://developers.google.com/people/api/rest/v1/people/listDirectoryPeople
 
-Check Google's wording and the console paths against the live pages before
-acting; the option names here were taken from those pages but not verified
-in this organization's console.
+The option names come from these pages. Not verified yet: the names and the
+paths in the Admin console of this organization.

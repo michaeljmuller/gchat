@@ -1,144 +1,132 @@
 # Google Cloud setup
 
-GChat signs in with an OAuth client that lives in a Google Cloud project of
-your organization. This page creates one. Organizations that ship a build with
-their client ID built in (see building.md) only need to do this once, for
-everyone.
+Making the OAuth client that GChat signs in with, and fixing sign-in
+problems. For a person with access to the Google Cloud console of the
+Workspace organization. What else a build needs is in prerequisites.md.
 
-Do this once per Workspace organization. If you use the app with two
-organizations (personal and work), do it in each one and keep both client IDs.
-It takes about ten minutes. Nothing here costs money.
+Each Workspace organization needs its own OAuth client. For a build with a
+built-in client ID (development.md), one person in the organization does
+this once, for everyone. For two organizations, do it in each, and keep both
+client IDs. It takes about ten minutes and costs nothing.
 
-The console's page names change from time to time. If a label below does not
-match, search for it in the console's search bar at the top.
+The names of console pages change from time to time. If a label does not
+match, use the search bar at the top of the console.
 
-1. Create a project
 
-   Open https://console.cloud.google.com/ and sign in with the Workspace
-   account you want to chat from. Click the project picker in the top bar,
-   then New Project. Name it anything (for example "GChat Mac"). Make sure
-   Organization shows your Workspace domain, not "No organization"; the
-   Internal setting in step 4 depends on it. Click Create, then select the
-   new project in the project picker.
+## Make the OAuth client
 
-2. Enable the two APIs
+1. Open https://console.cloud.google.com/ and sign in with an account of the
+   Workspace organization.
+2. Click the project picker in the top bar, then New Project.
+3. Type a name, for example "GChat Mac".
+4. Make sure that Organization shows the Workspace domain, not "No
+   organization". The Internal audience in step 15 needs it.
+5. Click Create, then select the new project in the project picker.
+6. Go to APIs & Services > Library, search for "Google Chat API", open it,
+   and click Enable.
+7. In the Library, search for "People API", open it, and click Enable. The
+   People API gives names and photos for user IDs.
+8. Go to APIs & Services > Enabled APIs & services > Google Chat API, and
+   open the Configuration tab. Google requires a Chat app configuration for
+   every project that calls the Chat API. Calls fail until it is saved.
+9. In App name, type a name, for example "GChat Mac". Google Chat shows this
+   name next to messages sent from GChat.
+10. In Avatar URL, type the URL of any image, for example
+    https://developers.google.com/chat/images/quickstart-app-avatar.png
+11. In Description, type a description, for example "Native Mac client".
+12. Turn off Interactive features. GChat receives no events, and the page
+    then needs nothing else.
+13. Click Save. This publishes nothing to other people.
+14. Go to Google Auth Platform. Older consoles call it APIs & Services >
+    OAuth consent screen. If the page shows Get started, click it.
+15. Type the app name and a support email address. For Audience, select
+    Internal, then type a contact email address. Internal limits sign-in to
+    the organization, needs no review by Google, and does not expire.
+16. Open Data Access and click Add or remove scopes.
+17. Paste these lines into the box "Manually add scopes":
 
-   Go to APIs & Services > Library. Search for "Google Chat API", open it,
-   click Enable. Go back to the Library, search for "People API", open it,
-   click Enable. The People API is what turns user IDs into names and photos.
+        https://www.googleapis.com/auth/chat.spaces.readonly
+        https://www.googleapis.com/auth/chat.spaces.create
+        https://www.googleapis.com/auth/chat.messages
+        https://www.googleapis.com/auth/chat.memberships.readonly
+        https://www.googleapis.com/auth/chat.users.readstate
+        https://www.googleapis.com/auth/directory.readonly
+        openid
+        https://www.googleapis.com/auth/userinfo.email
+        https://www.googleapis.com/auth/userinfo.profile
 
-3. Configure the Chat app
+18. Click Add to table, then Update, then Save.
+19. Open Clients. Older consoles call it APIs & Services > Credentials.
+    Click Create client, or Create credentials > OAuth client ID.
+20. For Application type, select iOS. This type is correct for a Mac app. It
+    has no client secret and returns to a native app.
+21. In Name, type "GChat Mac". In Bundle ID, type org.themullers.gchat. Leave
+    App Store ID and Team ID empty.
+22. Click Create and copy the Client ID. It looks like
+    1234567890-abc123.apps.googleusercontent.com. The Clients page shows it
+    again later. The client ID is an identifier, not a secret.
 
-   Google requires every project that calls the Chat API to have a Chat app
-   configured, even when it only acts as you. Calls fail until this is saved.
+The scopes give GChat these permissions:
 
-   Go to APIs & Services > Enabled APIs & services > Google Chat API, then
-   the Configuration tab. Fill in:
+- List conversations, and start direct messages and group chats.
+- Read and send messages.
+- List the members of conversations, for titles.
+- Read and set read markers.
+- Read the directory, for names, photos and the list of people.
+- Identify the person who is signed in.
 
-   - App name: GChat Mac (anything)
-   - Avatar URL: any https image URL, for example
-     https://developers.google.com/chat/images/quickstart-app-avatar.png
-   - Description: Native Mac client (anything)
-   - Interactive features: turn this off. The app never receives events, and
-     with it off the page asks for nothing else.
 
-   Click Save. This does not publish anything to other people.
+## Sign in
 
-4. Set up the consent screen
+1. Open GChat.
+2. If GChat shows a field for the client ID, paste the client ID.
+3. Click Sign In with Google.
+4. Select the Workspace account and allow every permission. GChat stops the
+   sign-in if a permission is not allowed.
 
-   Go to Google Auth Platform (older consoles call it APIs & Services >
-   OAuth consent screen). If it shows Get started, click it and enter:
+To change to another organization, click Sign Out in Settings, then sign in
+with the client ID of the other organization.
 
-   - App name: GChat Mac
-   - User support email: your address
-   - Audience: Internal. This limits sign-in to your organization, needs no
-     Google review, and the sign-in does not expire.
-   - Contact email: your address
 
-   Then open Data Access, click Add or remove scopes, and paste these lines
-   into the "Manually add scopes" box:
+## Problems during sign-in
 
-       https://www.googleapis.com/auth/chat.spaces.readonly
-       https://www.googleapis.com/auth/chat.spaces.create
-       https://www.googleapis.com/auth/chat.messages
-       https://www.googleapis.com/auth/chat.memberships.readonly
-       https://www.googleapis.com/auth/chat.users.readstate
-       https://www.googleapis.com/auth/directory.readonly
-       openid
-       https://www.googleapis.com/auth/userinfo.email
-       https://www.googleapis.com/auth/userinfo.profile
-
-   Click Add to table, then Update, then Save.
-
-   What they are for: list your conversations, start a direct message or
-   group chat, read and send messages, list members (to name direct messages),
-   read and set unread markers, list the organization's people with their
-   names and photos, and identify you.
-
-5. Create the OAuth client
-
-   In Google Auth Platform open Clients (older consoles: APIs & Services >
-   Credentials), click Create client (or Create credentials > OAuth client
-   ID) and enter:
-
-   - Application type: iOS. This is correct for a Mac app; it is the client
-     type with no secret that redirects back to a native app.
-   - Name: GChat Mac
-   - Bundle ID: org.themullers.gchat
-   - App Store ID and Team ID: leave empty
-
-   Click Create. Copy the Client ID. It looks like
-   1234567890-abc123.apps.googleusercontent.com. You can find it again
-   later on the Clients page. It is an identifier, not a secret.
-
-6. Sign in
-
-   Start GChat, paste the client ID, click Sign In with Google. A browser
-   sheet opens. Choose your Workspace account and allow every permission
-   listed; the app refuses to continue if one is left unticked.
-
-To switch organizations, choose Sign Out in Settings, paste the other
-organization's client ID, and sign in again.
-
-## If something goes wrong
-
-During sign-in, in the browser sheet:
+These messages show in Google's sign-in sheet:
 
 - "Access blocked: GChat Mac can only be used within its organization"
-  (Error 403: org_internal). You picked an account outside the organization
-  that owns the project. Pick the right account, or create the project in
-  the other organization.
-- "Error 400: admin_policy_enforced". The Workspace admin restricts which
-  apps may use Chat data. An admin has to allow it in the Admin console
-  under Security > Access and data control > API controls: either tick
-  "Trust internal apps" or add this client ID as a trusted app.
-- "Error 401: invalid_client". The client ID has a typo or was deleted.
-- "Error 400: invalid_request" or "redirect_uri_mismatch". The client was
-  not created with application type iOS. Create a new one (step 5).
+  (Error 403: org_internal). The account is not in the organization that
+  owns the project. Select an account of that organization, or make the
+  project in the other organization.
+- "Error 400: admin_policy_enforced". A Workspace admin limits which apps
+  can use Chat data. An admin must allow GChat in the Admin console under
+  Security > Access and data control > API controls. The admin selects
+  "Trust internal apps", or adds the client ID as a trusted app.
+- "Error 401: invalid_client". The client ID is wrong, or the client was
+  deleted.
+- "Error 400: invalid_request" or "redirect_uri_mismatch". The client is not
+  of type iOS. Make a new client (steps 19 to 22).
 
-After sign-in, in the app:
 
-- "Google Chat API has not been used in project ... or it is disabled".
-  Step 2 was skipped. Enabling can take a minute to take effect.
+## Problems after sign-in
+
+These messages and symptoms show in GChat:
+
+- "Google Chat API has not been used in project ... or it is disabled". Step
+  6 was not done. After the API is enabled, it can take a minute to work.
 - "Google Chat app not found. To create a Chat app, you must turn on the
-  Chat API and configure the app in the Google Cloud console." Step 3 was
-  skipped or not saved.
-- "These permissions were not granted". A box was left unticked on the
+  Chat API and configure the app in the Google Cloud console." Steps 8 to
+  13 were not done or not saved.
+- "These permissions were not granted". A permission was not allowed on the
   consent page. Sign in again and allow all of them.
-- "Request had insufficient authentication scopes". A scope was added to
-  the project after you signed in. Sign out and sign in again.
-- People show as "Unknown" and direct messages as "Direct Message". The
-  People API is not enabled (step 2), or the organization has contact
-  sharing turned off (Admin console > Directory > Directory settings).
-- The New Conversation sheet says the directory could not be loaded, with
+- "Request had insufficient authentication scopes". A scope was added after
+  the sign-in. Sign out and sign in again.
+- People show as "Unknown", and direct messages as "Direct Message". The
+  People API is not enabled (step 7), or the organization turned off contact
+  sharing (Admin console > Directory > Directory settings).
+- The New Conversation sheet shows a yellow triangle, and the panel shows
   "The G Suite domain admin has disabled external directory sharing". The
-  organization shares only the signed-in user's own profile with third-party
-  apps, not the directory. A Workspace super admin can change that in the
-  Admin console under Directory > Directory settings > Sharing settings >
-  External Directory sharing, from "Authenticated user basic profile fields"
-  to "Organization data and authenticated user basic profile fields". It
-  applies to every third-party app in the organization. Until then the sheet
-  lists only people you already have a conversation with.
-- "Your sign-in has expired". The refresh token was revoked or, if the
-  consent screen audience is External and in Testing, it expired after 7
-  days. Use Internal (step 4).
+  organization does not let apps read its directory. The sheet then lists
+  only people from existing conversations. A Workspace admin can change the
+  setting. The request, with its risks, is in directory-sharing-request.md.
+- "Your sign-in has expired". Google revoked the refresh token. If the
+  audience of the consent screen is External and in testing, tokens expire
+  after 7 days. Use Internal (step 15).
