@@ -169,6 +169,13 @@ From the command line:
 The app is then at build/Build/Products/Release/GChat.app. Copy it to
 /Applications.
 
+To build a copy for an organization with its OAuth client ID built in, copy
+Config/Local.xcconfig.example to Config/Local.xcconfig and fill in the client
+ID and organization name. That file is not committed. A build with a
+built-in ID shows only a Sign In button; "Use a different organization…" on
+the sign-in screen still allows pasting another client ID. Without the file,
+the sign-in screen asks for the client ID as before.
+
 To build without an Apple Developer account, add
 CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= to the xcodebuild command. That signs
 for this Mac only. The Keychain treats differently signed builds as different

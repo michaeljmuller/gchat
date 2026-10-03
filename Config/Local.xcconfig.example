@@ -1,0 +1,6 @@
+// Copy to Local.xcconfig (not committed) and fill in to build an
+// organization's copy of the app with its OAuth client ID built in.
+// Leave both empty, or skip the file, for a build that asks for the ID.
+
+GCHAT_CLIENT_ID = 1234567890-abcdef.apps.googleusercontent.com
+GCHAT_ORGANIZATION = Example Organization

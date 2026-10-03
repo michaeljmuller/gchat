@@ -1,0 +1,10 @@
+// Build settings shared by every build of the app.
+//
+// An organization's build can carry its OAuth client ID, so that people
+// sign in without pasting it. Those values go in Local.xcconfig next to this
+// file, which is not committed. See Local.xcconfig.example.
+
+GCHAT_CLIENT_ID =
+GCHAT_ORGANIZATION =
+
+#include? "Local.xcconfig"

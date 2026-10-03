@@ -28,8 +28,20 @@ final class AppModel {
 
     private static let clientIDKey = "oauthClientID"
 
+    /// The OAuth client ID and organization name built into this copy of the
+    /// app (Config/Local.xcconfig), if any.
+    let builtInClientID = AppModel.infoValue("GChatClientID")
+    let builtInOrganization = AppModel.infoValue("GChatOrganization")
+
+    private static func infoValue(_ key: String) -> String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty || trimmed.hasPrefix("$(") ? nil : trimmed
+    }
+
     init() {
-        clientID = UserDefaults.standard.string(forKey: Self.clientIDKey) ?? ""
+        let stored = UserDefaults.standard.string(forKey: Self.clientIDKey) ?? ""
+        clientID = stored.isEmpty ? (AppModel.infoValue("GChatClientID") ?? "") : stored
         notifier.onOpen = { [weak self] space in self?.show(space) }
         observeSystem()
 
