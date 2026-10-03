@@ -14,6 +14,6 @@ GCHAT_BUILD_DATE =
 
 // Link to the source code, shown in the About window when set. In xcconfig
 // files "//" starts a comment, so write the URL as https:/$()/github.com/...
-GCHAT_SOURCE_URL =
+GCHAT_SOURCE_URL = https:/$()/github.com/michaeljmuller/gchat
 
 #include? "Local.xcconfig"
