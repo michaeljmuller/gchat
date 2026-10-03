@@ -2,7 +2,7 @@
 
 Work that was left out of GChat or deferred, with the reasons, for the
 developer. It is not a prioritized backlog. What GChat does today is in
-functional-spec.md.
+behavior.md.
 
 
 ## Push delivery in place of polling
@@ -43,7 +43,7 @@ Pub/Sub at this volume.
 
 ## Images in the transcript: what is left
 
-Images uploaded to Chat show in the transcript (functional-spec.md). Left
+Images uploaded to Chat show in the transcript (behavior.md). Left
 out:
 
 - The row shows a placeholder of a fixed size until the image loads, then
@@ -144,7 +144,7 @@ Not verified yet: the largest page size of messages.list.
 
 GChat posts a notification for each new message from another person in a
 conversation that is not on screen. The Dock icon shows the number of unread
-conversations (functional-spec.md). See notify() in
+conversations (behavior.md). See notify() in
 GChat/AppModel.swift and GChat/Notifier.swift.
 
 First, make sure that these basics work with a real account:

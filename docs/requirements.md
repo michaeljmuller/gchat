@@ -1,7 +1,7 @@
 # Requirements
 
 What the owner of the project asked for, in the owner's terms, with the date
-of the request. What the app does is in functional-spec.md. Every feature
+of the request. What the app does is in behavior.md. Every feature
 there must trace to an item here.
 
 The quotes are from the conversation in which the app was built.

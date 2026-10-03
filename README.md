@@ -17,7 +17,7 @@ GChat has these requirements:
 The documents are in docs/:
 
 - requirements.md: what was asked for
-- functional-spec.md: what the app does, its shortcuts and its configuration
+- behavior.md: what the app does, its shortcuts and its configuration
 - design.md: how the app is built and why, and what it stores
 - prerequisites.md: tools, accounts and keys that a build or release needs
 - development.md: building, testing and reviewing changes

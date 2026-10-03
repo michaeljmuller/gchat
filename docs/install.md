@@ -1,7 +1,7 @@
 # GChat for Zia Consulting
 
 Installing GChat and signing in, for Zia Consulting colleagues. What GChat
-does in detail is in functional-spec.md.
+does in detail is in behavior.md.
 
 GChat is a Mac app for Google Chat. It shows direct messages, group chats,
 spaces and meeting chats, and it posts notifications for new messages,

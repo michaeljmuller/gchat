@@ -1,7 +1,7 @@
 # Design
 
 How GChat is built and why, for developers and reviewers. What it does is in
-functional-spec.md. How to build it is in development.md.
+behavior.md. How to build it is in development.md.
 
 
 ## Shape
