@@ -1,7 +1,9 @@
 # Developer ID signing certificate
 
 Releases of GChat for other people are signed with a Developer ID
-Application certificate and notarized by Apple.
+Application certificate and notarized by Apple. Debug builds are signed with
+the same certificate, so that the Keychain treats them as the same app as a
+release; the reasoning is in the README under "Development workflow".
 
 Current certificate: "Developer ID Application: Michael Muller (84URFQ3GPW)",
 issued October 2, 2026 by the G2 authority, valid until September 17, 2031.
