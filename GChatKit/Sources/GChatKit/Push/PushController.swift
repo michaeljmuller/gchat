@@ -28,6 +28,10 @@ public final class PushController {
     private let defaults: UserDefaults
     private let session: URLSession
     private var task: Task<Void, Never>?
+    /// The wait before the next attempt, while one is in progress.
+    private var retryWait: Task<Void, Never>?
+    private var wasWokenEarly = false
+    private var lastEarlyAttempt = Date.distantPast
 
     private static let log = Logger(subsystem: "org.themullers.gchat", category: "push")
     private static let subscriptionKey = "pushSubscription"
@@ -36,6 +40,7 @@ public final class PushController {
     private static let renewalMargin: TimeInterval = 2 * 24 * 3600
     /// The wait between attempts doubles from 1 second up to this.
     private static let longestRetryWait: TimeInterval = 15 * 60
+    private static let earlyAttemptSpacing: TimeInterval = 60
     /// How long the relay must be out of reach before the app says so.
     private static let downAfter: TimeInterval = 30
 
@@ -58,10 +63,26 @@ public final class PushController {
 
     public func start() {
         guard task == nil else { return }
+        store.onActivity = { [weak self] in self?.noteActivity() }
         task = Task { await self.run() }
     }
 
+    /// A message was sent or received. If the relay is out of reach and the
+    /// controller is waiting to try again, try now: the person is chatting, so
+    /// prompt delivery matters, and Google is reachable. At most once a minute,
+    /// so a busy conversation during a real failure does not cause many attempts.
+    func noteActivity() {
+        guard let retryWait, Date().timeIntervalSince(lastEarlyAttempt) >= Self.earlyAttemptSpacing else {
+            return
+        }
+        lastEarlyAttempt = Date()
+        wasWokenEarly = true
+        retryWait.cancel()
+    }
+
     public func stop() {
+        retryWait?.cancel()
+        store.onActivity = nil
         task?.cancel()
         task = nil
         store.isPushConnected = false
@@ -99,8 +120,18 @@ public final class PushController {
             }
             store.isPushConnected = false
             if Task.isCancelled { break }
-            try? await Task.sleep(for: .seconds(delay))
-            delay = min(delay * 2, Self.longestRetryWait)
+            // The wait is its own task, so that noteActivity can end it early.
+            let wait = Task<Void, Never> { _ = try? await Task.sleep(for: .seconds(delay)) }
+            retryWait = wait
+            await wait.value
+            retryWait = nil
+            if wasWokenEarly {
+                // Start the waits again from the beginning.
+                wasWokenEarly = false
+                delay = 1
+            } else {
+                delay = min(delay * 2, Self.longestRetryWait)
+            }
         }
         store.isPushConnected = false
     }

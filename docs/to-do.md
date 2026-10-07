@@ -246,29 +246,30 @@ https://developers.google.com/workspace/chat/limits:
 Over a limit, Google answers 429. A higher limit for a project can be
 requested, but Google does not guarantee it.
 
-One running copy of GChat uses about:
+These numbers are for a copy that polls. A copy with push delivery polls
+once a minute. One polling copy of GChat uses about:
 
-- In front with a conversation open: 20 message reads and 4 space reads a
+- During a conversation: 30 message reads and 6 space reads a minute.
+- After 10 minutes without a message: 4 message reads and 2 space reads a
   minute.
-- In the background: 6 message reads and 2 space reads a minute.
 - At the first launch: one membership read for each direct message and group
   chat, about 200 for an account with 200 conversations, at about 10 a
   second.
 
-The limits allow about 150 copies in front at the same time, or about 500
-in the background. A space open in about 45 copies at the same time reaches
-the limit for one space. Zia Consulting has about 30 active employees, so
-the limits are far away. The risk is many first launches in the same minute.
+The limits allow about 100 polling copies in active conversations at the
+same time. Zia Consulting has about 30 active employees, and their copies
+use push delivery, so the limits are far away. The risks are a relay
+failure during a busy time, and many first launches in the same minute.
 
 Done: backoff on 429 and a limit of about 10 requests a second at startup
 (design.md).
 
+Done: push delivery, and polling that slows after 10 minutes without a
+message (design.md).
+
 Left:
 
-- Poll less: the open conversation every 5 to 10 seconds, no polling after
-  some minutes without activity, and none when the window is closed or the
-  screen is locked.
-- Push delivery removes most reads.
+- No polling when the screen is locked.
 - Not verified yet: which quota the calls for read markers use. The quota
   page of the Cloud console shows it under real use.
 

@@ -246,6 +246,38 @@ import Testing
         #expect(store.space(named: "spaces/new") != nil)
     }
 
+    @Test func pollingFollowsChatActivity() {
+        #expect(ChatStore.pollIntervals(sinceActivity: 0) == (2, 10))
+        #expect(ChatStore.pollIntervals(sinceActivity: 119) == (2, 10))
+        #expect(ChatStore.pollIntervals(sinceActivity: 120) == (5, 15))
+        #expect(ChatStore.pollIntervals(sinceActivity: 599) == (5, 15))
+        #expect(ChatStore.pollIntervals(sinceActivity: 600) == (15, 30))
+        #expect(ChatStore.pollIntervals(sinceActivity: 86_400) == (15, 30))
+    }
+
+    @Test func sendingAndReceivingCountAsActivity() async throws {
+        let store = await makeStore()
+        var activity = 0
+        store.onActivity = { activity += 1 }
+        store.selection = "spaces/team"
+        await store.open("spaces/team")
+        #expect(activity == 0)
+
+        await store.send("hi", to: "spaces/team")
+        #expect(activity == 1)
+
+        let later = Date().addingTimeInterval(5)
+        chat.update { state in
+            state.spaces[1].lastActiveTime = later
+            state.messages["spaces/dm"] = [message("hello", in: "spaces/dm", from: "users/ann", at: later)]
+        }
+        await store.refreshSpaces()
+        #expect(activity == 2)
+        // Nothing new: no activity.
+        await store.refreshSpaces()
+        #expect(activity == 2)
+    }
+
     @Test func openingMarksRead() async throws {
         let store = await makeStore()
         #expect(await eventually { store.unreadCount == 1 })

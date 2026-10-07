@@ -48,24 +48,39 @@ file. The owner chose the Keychain (October 2, 2026).
 
 ## Getting messages
 
-The Chat API cannot push messages to a client app, so GChat polls:
+The Chat API cannot push messages to a client app. Without push delivery
+through the relay (below), GChat polls. The rate follows chat activity,
+which is a message sent or received in any conversation:
 
-- The open conversation every 3 seconds, or every 10 seconds when GChat is
-  in the background. GChat asks only for messages created after the newest
-  one it has.
-- The conversation list every 15 seconds, or every 30 seconds in the
-  background. Each conversation in the list has the time of its last
-  activity, so one request shows which conversations changed. GChat then
-  gets the new messages of those conversations only.
+    Time since the last activity    Open conversation    All conversations
+    less than 2 minutes             every 2 seconds      every 10 seconds
+    2 to 10 minutes                 every 5 seconds      every 15 seconds
+    more than 10 minutes            every 15 seconds     every 30 seconds
+
+- For the open conversation, GChat asks only for messages created after the
+  newest one it has.
+- For all conversations, GChat gets the conversation list. Each conversation
+  in the list has the time of its last activity, so one request shows which
+  conversations changed. GChat then gets the new messages of those
+  conversations only.
 - No polling while the Mac is offline.
+
+The rate does not depend on whether GChat is in front. The person can be
+working with a colleague and switching between GChat and other apps. A
+first version polled more slowly in the background. The owner rejected
+that (October 7, 2026).
+
+The limits: every 2 seconds is the fastest rate, because all copies of GChat
+share the quota of one Cloud project, and Google limits reads on one
+conversation (to-do.md, "Quota"). The slowest rate is every 30 seconds,
+because it decides how late the first message after a quiet time shows.
 
 Messages stay in memory. A launch loads the newest 50 messages of a
 conversation when it opens.
 
-Consequences: a notification can come up to 15 seconds after the message,
-or 30 seconds in the background. A message that someone edits or deletes
-elsewhere does not change in GChat until the next launch, because polling
-asks only for new messages.
+Consequences of polling: a notification can come up to 30 seconds after the
+message. A message that someone edits or deletes elsewhere does not change
+in GChat until the next launch, because polling asks only for new messages.
 
 Push delivery through a relay replaces most of this polling. It is in
 progress; see "Push delivery" below.
@@ -119,6 +134,10 @@ What GChat does:
   there is no limit on the number of attempts. After a long failure, GChat
   can therefore take up to 15 minutes to find that the relay is back.
   Polling covers that time.
+- When a message is sent or received while GChat waits to try again, it
+  tries at once, and the waits start again from 1 second. The person is
+  chatting, so prompt delivery matters, and Google can be reached. This
+  happens at most once a minute.
 - The ID token lasts an hour. The relay ends the stream then, and GChat
   connects again with a new token.
 

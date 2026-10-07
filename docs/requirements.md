@@ -113,6 +113,14 @@ All in the Settings window (October 2, 2026, unless stated):
 - A sign in the app when the relay is down and the app polls: "New message
   notification server is down; polling for new messages every X second."
   (October 7, 2026)
+- While the app polls, the rate follows activity: fast during a
+  conversation, slower after a while without messages. (October 7, 2026)
+- The same rate in the background as in front: "might be actively working
+  on something with a colleague and swapping back and forth." (October 7,
+  2026)
+- Fewer attempts to reach a relay that is down: waits that grow to 15
+  minutes. An attempt at once when a message is sent or received. (October
+  7, 2026)
 - No message content on the owner's server. A compromised server can show
   that a message arrived, but not what it says. (October 6, 2026)
 

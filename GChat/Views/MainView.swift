@@ -141,7 +141,7 @@ struct SidebarView: View {
     private var relayDownMessage: String? {
         guard store.isPushDown else { return nil }
         return "New message notification server is down; polling for new messages every "
-            + "\(ChatStore.listPollSeconds) seconds."
+            + "\(store.listPollSeconds) seconds."
     }
 
     /// Applies the search field and the sidebar settings. The store's order is most recent first.
