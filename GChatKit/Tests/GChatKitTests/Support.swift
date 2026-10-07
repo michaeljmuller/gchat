@@ -115,6 +115,12 @@ final class FakeChat: ChatService, @unchecked Sendable {
         }
     }
 
+    func getMessage(_ name: String) async throws -> Message {
+        let found = update { state in state.messages.values.joined().first { $0.name == name } }
+        guard let found else { throw APIError(status: 404, message: "Not found") }
+        return found
+    }
+
     func listMembers(of space: String) async throws -> [Membership] {
         update { $0.members[space] ?? [] }
     }
@@ -187,4 +193,75 @@ func eventually(_ condition: @MainActor () -> Bool) async -> Bool {
         try? await Task.sleep(for: .milliseconds(10))
     }
     return condition()
+}
+
+
+struct FixedIdentity: IdentityTokenProviding {
+    func idToken(minimumValidity: TimeInterval) async throws -> String { "id-token" }
+}
+
+/// Workspace Events subscriptions kept in memory.
+final class FakeEvents: EventSubscriptionService, @unchecked Sendable {
+    struct State {
+        var subscriptions: [String: EventSubscription] = [:]
+        /// When set, create answers 409 as Google does for a second subscription.
+        var createConflicts = false
+        var calls: [String] = []
+    }
+
+    private let lock = NSLock()
+    private var state = State()
+
+    func update<T>(_ body: (inout State) throws -> T) rethrows -> T {
+        try lock.withLock { try body(&state) }
+    }
+
+    var calls: [String] { update { $0.calls } }
+
+    func create(topic: String) async throws -> EventSubscription {
+        try update { state in
+            state.calls.append("create")
+            if state.createConflicts {
+                throw APIError(status: 409, message: "Subscription already exists", code: "ALREADY_EXISTS")
+            }
+            let subscription = EventSubscription(
+                name: "subscriptions/new-\(state.subscriptions.count + 1)", state: "ACTIVE",
+                expireTime: Date().addingTimeInterval(7 * 86400), pubsubTopic: topic)
+            state.subscriptions[subscription.name] = subscription
+            return subscription
+        }
+    }
+
+    func get(_ name: String) async throws -> EventSubscription {
+        try update { state in
+            state.calls.append("get")
+            guard let subscription = state.subscriptions[name] else {
+                throw APIError(status: 404, message: "Not found")
+            }
+            return subscription
+        }
+    }
+
+    func findExisting() async throws -> EventSubscription? {
+        update { state in
+            state.calls.append("find")
+            return state.subscriptions.values.first
+        }
+    }
+
+    func renew(_ name: String) async throws {
+        update { $0.calls.append("renew") }
+    }
+
+    func reactivate(_ name: String) async throws {
+        update { $0.calls.append("reactivate") }
+    }
+
+    func delete(_ name: String) async throws {
+        update { state in
+            state.calls.append("delete")
+            state.subscriptions[name] = nil
+            state.createConflicts = false
+        }
+    }
 }

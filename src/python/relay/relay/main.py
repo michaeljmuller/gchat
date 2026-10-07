@@ -109,6 +109,9 @@ def create_app(
 
         async def stream() -> AsyncIterator[str]:
             try:
+                # Sent at once, so that proxies and clients see the stream
+                # open now and not at the first keepalive.
+                yield ": connected\n\n"
                 while True:
                     remaining = identity.expires - time.time()
                     if remaining <= 0:

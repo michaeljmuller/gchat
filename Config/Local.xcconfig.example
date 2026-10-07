@@ -4,3 +4,8 @@
 
 GCHAT_CLIENT_ID = 1234567890-abcdef.apps.googleusercontent.com
 GCHAT_ORGANIZATION = Example Organization
+
+// Optional: push delivery through a relay (docs/deployment.md). In xcconfig
+// files "//" starts a comment, so write the URL with $() between the slashes.
+GCHAT_RELAY_URL = https:/$()/relay.example.com
+GCHAT_EVENTS_TOPIC = projects/my-project/topics/gchat-events

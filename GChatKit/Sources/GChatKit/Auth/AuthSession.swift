@@ -4,8 +4,13 @@ public protocol AccessTokenProviding: Sendable {
     func accessToken(forceRefresh: Bool) async throws -> String
 }
 
+public protocol IdentityTokenProviding: Sendable {
+    /// A Google ID token that stays valid for at least `minimumValidity` seconds.
+    func idToken(minimumValidity: TimeInterval) async throws -> String
+}
+
 /// Holds the OAuth tokens for the signed-in account and refreshes them as needed.
-public actor AuthSession: AccessTokenProviding {
+public actor AuthSession: AccessTokenProviding, IdentityTokenProviding {
     public nonisolated let config: OAuthConfig
     private let store: any TokenStore
     private let urlSession: URLSession
@@ -47,10 +52,23 @@ public actor AuthSession: AccessTokenProviding {
         let tokens = TokenSet(
             accessToken: response.accessToken,
             refreshToken: refreshToken,
-            expiry: Date().addingTimeInterval(response.expiresIn)
+            expiry: Date().addingTimeInterval(response.expiresIn),
+            idToken: response.idToken
         )
         self.tokens = tokens
         store.save(tokens)
+    }
+
+    public func idToken(minimumValidity: TimeInterval = 600) async throws -> String {
+        guard let tokens else { throw AuthError.reauthRequired }
+        if let idToken = tokens.idToken, tokens.expiry.timeIntervalSinceNow > minimumValidity {
+            return idToken
+        }
+        // Google issues a new ID token with each refreshed access token.
+        guard let idToken = try await refresh(using: tokens.refreshToken).idToken else {
+            throw AuthError.tokenExchangeFailed("Google returned no ID token")
+        }
+        return idToken
     }
 
     public func accessToken(forceRefresh: Bool = false) async throws -> String {
@@ -80,7 +98,8 @@ public actor AuthSession: AccessTokenProviding {
             return TokenSet(
                 accessToken: response.accessToken,
                 refreshToken: response.refreshToken ?? refreshToken,
-                expiry: Date().addingTimeInterval(response.expiresIn)
+                expiry: Date().addingTimeInterval(response.expiresIn),
+                idToken: response.idToken
             )
         }
         refreshTask = task
@@ -102,12 +121,14 @@ public actor AuthSession: AccessTokenProviding {
         var expiresIn: TimeInterval
         var refreshToken: String?
         var scope: String?
+        var idToken: String?
 
         enum CodingKeys: String, CodingKey {
             case accessToken = "access_token"
             case expiresIn = "expires_in"
             case refreshToken = "refresh_token"
             case scope
+            case idToken = "id_token"
         }
     }
 

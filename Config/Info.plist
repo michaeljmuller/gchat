@@ -6,6 +6,10 @@
 	<string>$(GCHAT_CLIENT_ID)</string>
 	<key>GChatOrganization</key>
 	<string>$(GCHAT_ORGANIZATION)</string>
+	<key>GChatRelayURL</key>
+	<string>$(GCHAT_RELAY_URL)</string>
+	<key>GChatEventsTopic</key>
+	<string>$(GCHAT_EVENTS_TOPIC)</string>
 	<key>GChatCommit</key>
 	<string>$(GCHAT_COMMIT)</string>
 	<key>GChatBuildDate</key>

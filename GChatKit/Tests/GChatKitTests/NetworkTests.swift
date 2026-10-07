@@ -141,6 +141,53 @@ import Testing
         #expect(urls.values.first?.absoluteString == "https://chat.googleapis.com/v1/media/ABC123?alt=media")
     }
 
+    @Test func idTokenComesFromSignInAndIsRenewedWithTheAccessToken() async throws {
+        let bodies = Recorder<String>()
+        StubProtocol.handler = { request in
+            bodies.append(request.bodyString)
+            return (200, #"{"access_token":"a2","expires_in":3600,"id_token":"id2"}"#)
+        }
+        let fresh = InMemoryTokenStore(TokenSet(
+            accessToken: "a1", refreshToken: "r1", expiry: Date().addingTimeInterval(3000), idToken: "id1"))
+        let auth = AuthSession(config: config, store: fresh, urlSession: StubProtocol.session())
+        #expect(try await auth.idToken() == "id1")
+        #expect(bodies.values.isEmpty)
+
+        // Saved by an older version, without an ID token: one refresh gets it.
+        let old = InMemoryTokenStore(TokenSet(
+            accessToken: "a1", refreshToken: "r1", expiry: Date().addingTimeInterval(3000)))
+        let upgraded = AuthSession(config: config, store: old, urlSession: StubProtocol.session())
+        #expect(try await upgraded.idToken() == "id2")
+        #expect(bodies.values.count == 1)
+        #expect(old.load()?.idToken == "id2")
+    }
+
+    @Test func subscriptionIsMadeForAllSpacesWithoutContent() async throws {
+        let requests = Recorder<(String, String, String)>()
+        StubProtocol.handler = { request in
+            requests.append((request.httpMethod ?? "", request.url!.absoluteString, request.bodyString))
+            return (200, #"""
+                {"name": "operations/1", "done": true,
+                 "response": {"name": "subscriptions/chat-spaces-abc", "state": "ACTIVE",
+                              "expireTime": "2026-10-14T12:00:00Z",
+                              "notificationEndpoint": {"pubsubTopic": "projects/p/topics/t"}}}
+                """#)
+        }
+        let api = WorkspaceEventsAPI(client: APIClient(tokens: FixedToken(), session: StubProtocol.session()))
+        let subscription = try await api.create(topic: "projects/p/topics/t")
+
+        #expect(subscription.name == "subscriptions/chat-spaces-abc")
+        #expect(subscription.isActive)
+        #expect(subscription.pubsubTopic == "projects/p/topics/t")
+        let request = try #require(requests.values.first)
+        #expect(request.0 == "POST")
+        #expect(request.1 == "https://workspaceevents.googleapis.com/v1/subscriptions")
+        let body = try #require(try JSONSerialization.jsonObject(with: Data(request.2.utf8)) as? [String: Any])
+        #expect(body["targetResource"] as? String == "//chat.googleapis.com/spaces/-")
+        #expect((body["payloadOptions"] as? [String: Any])?["includeResource"] as? Bool == false)
+        #expect((body["eventTypes"] as? [String])?.contains("google.workspace.chat.message.v1.created") == true)
+    }
+
     @Test func markReadPatchesReadState() async throws {
         let requests = Recorder<(String, String, String)>()
         StubProtocol.handler = { request in

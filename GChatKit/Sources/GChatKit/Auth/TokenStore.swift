@@ -5,11 +5,16 @@ public struct TokenSet: Codable, Sendable, Equatable {
     public var accessToken: String
     public var refreshToken: String
     public var expiry: Date
+    /// Proves who the person is, to the relay. Grants no access to Google
+    /// APIs. Issued with the access token and valid for the same time.
+    /// Missing in token sets saved by older versions.
+    public var idToken: String?
 
-    public init(accessToken: String, refreshToken: String, expiry: Date) {
+    public init(accessToken: String, refreshToken: String, expiry: Date, idToken: String? = nil) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.expiry = expiry
+        self.idToken = idToken
     }
 }
 

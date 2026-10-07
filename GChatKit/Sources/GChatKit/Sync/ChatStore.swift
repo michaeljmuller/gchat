@@ -58,6 +58,9 @@ public final class ChatStore {
     public var selection: String?
     public var isAppActive = true
     public var isOnline = true
+    /// True while the stream to the relay is open. Polling then slows to a
+    /// safety net. Set by PushController.
+    public var isPushConnected = false
 
     /// Called with new messages from other people in a conversation that is not in front.
     @ObservationIgnored public var onIncoming: ((Space, [Message]) -> Void)?
@@ -81,6 +84,7 @@ public final class ChatStore {
     @ObservationIgnored private var profileRequests: Set<String> = []
     @ObservationIgnored private var titleAttempts: Set<String> = []
     @ObservationIgnored private var pollTask: Task<Void, Never>?
+    @ObservationIgnored private var lastSafetyPoll = Date.distantPast
     @ObservationIgnored private var reportedUnread = -1
     @ObservationIgnored private var refreshCount = 0
 
@@ -100,6 +104,7 @@ public final class ChatStore {
     private static let deletedName = "Deleted User"
     private static let log = Logger(subsystem: "org.themullers.gchat", category: "names")
 
+    private static let safetyInterval: TimeInterval = 60
     private static let activeInterval = Duration.seconds(3)
     private static let inactiveInterval = Duration.seconds(10)
     private static let pageSize = 50
@@ -265,10 +270,53 @@ public final class ChatStore {
                 await refreshSpaces()
                 continue
             }
+            if isPushConnected {
+                // Notices arrive through the relay. Poll now and then anyway,
+                // in case one was lost.
+                if Date().timeIntervalSince(lastSafetyPoll) >= Self.safetyInterval {
+                    await catchUp()
+                }
+                continue
+            }
             await pollSelection()
             if tick % (isAppActive ? 5 : 3) == 0 {
                 await refreshSpaces()
             }
+        }
+    }
+
+    /// Brings the conversation list and the open conversation up to date.
+    public func catchUp() async {
+        lastSafetyPoll = Date()
+        await refreshSpaces()
+        await pollSelection()
+    }
+
+    /// Acts on a notice from the relay. A notice holds identifiers only, so
+    /// the content comes from the Chat API with the person's own sign-in.
+    public func handlePush(type: String, subject: String, resource: String?) async {
+        let prefix = "//chat.googleapis.com/"
+        guard subject.hasPrefix(prefix) else { return }
+        let name = String(subject.dropFirst(prefix.count))
+        switch type {
+        case WorkspaceEventsAPI.messageCreated:
+            guard let space = space(named: name) else {
+                // A conversation that is not in the list yet.
+                await refreshSpaces()
+                return
+            }
+            await ingest(in: space, since: space.lastActiveTime, changed: true)
+        case WorkspaceEventsAPI.messageUpdated:
+            guard let resource, transcripts[name]?.isLoaded == true,
+                  let message = try? await chat.getMessage(resource),
+                  let index = transcripts[name]?.messages.firstIndex(where: { $0.name == resource })
+            else { return }
+            transcripts[name]?.messages[index] = message
+        case WorkspaceEventsAPI.messageDeleted:
+            guard let resource else { return }
+            transcripts[name]?.messages.removeAll { $0.name == resource }
+        default:
+            break
         }
     }
 

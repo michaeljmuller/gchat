@@ -50,7 +50,7 @@ Errors, each with a JSON body {"detail": "<reason>"}:
 
 Answer: 200 with Content-Type text/event-stream. The stream is open until
 the ID token expires, the client closes it, or the relay restarts. It has
-three kinds of item:
+these kinds of item:
 
 A notice, for each event of the subscription:
 
@@ -66,8 +66,10 @@ A notice, for each event of the subscription:
   spaces/AAAA/messages/BBBB, or null if the event has none.
 - time: when the event happened, RFC 3339.
 
-A keepalive, every 20 seconds:
+A comment line at once when the stream opens, then a keepalive every 20
+seconds. Clients ignore both:
 
+    : connected
     : ping
 
 The end of the stream when the ID token expires:

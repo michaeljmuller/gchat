@@ -6,6 +6,8 @@ public protocol ChatService: Sendable {
     /// Returns one page, newest first. `after` limits it to messages created later.
     func listMessages(in space: String, pageSize: Int, pageToken: String?, after: Date?) async throws -> MessagePage
     func sendMessage(_ text: String, to space: String) async throws -> Message
+    /// One message by its resource name, "spaces/A/messages/B".
+    func getMessage(_ name: String) async throws -> Message
     func listMembers(of space: String) async throws -> [Membership]
     func readState(for space: String) async throws -> SpaceReadState
     func markRead(space: String, at time: Date) async throws
@@ -75,6 +77,10 @@ public struct ChatAPI: ChatService {
     public func sendMessage(_ text: String, to space: String) async throws -> Message {
         let body = try JSONEncoder().encode(["text": text])
         return try await client.send("POST", url("\(space)/messages"), body: body)
+    }
+
+    public func getMessage(_ name: String) async throws -> Message {
+        try await client.send("GET", url(name))
     }
 
     public func listMembers(of space: String) async throws -> [Membership] {

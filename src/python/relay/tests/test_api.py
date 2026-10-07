@@ -71,6 +71,7 @@ async def test_streams_notices_until_the_token_expires(config):
     body = response.text
     data_line = next(line for line in body.splitlines() if line.startswith("data: {\"type\""))
     assert json.loads(data_line[6:]) == notice.as_dict()
+    assert body.startswith(": connected\n\n")
     assert ": ping" in body
     assert body.endswith("event: reauth\ndata: {}\n\n")
     # The client is gone, and the owner keeps the subscription.

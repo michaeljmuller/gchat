@@ -7,6 +7,13 @@
 GCHAT_CLIENT_ID =
 GCHAT_ORGANIZATION =
 
+// Push delivery for an organization's build (docs/design.md): the address of
+// the relay, and the Pub/Sub topic that Google publishes events to
+// (projects/<project>/topics/<topic>). Both set in Local.xcconfig. Empty
+// means that the app polls. Write the URL as https:/$()/host, see below.
+GCHAT_RELAY_URL =
+GCHAT_EVENTS_TOPIC =
+
 // Shown in the About window. scripts/release.sh sets the commit and date for
 // releases; other builds say "development".
 GCHAT_COMMIT = development

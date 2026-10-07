@@ -21,6 +21,7 @@ final class AppModel {
     }
 
     @ObservationIgnored private var auth: AuthSession?
+    @ObservationIgnored private var push: PushController?
     @ObservationIgnored private let notifier = Notifier()
     @ObservationIgnored private let webAuth = WebAuth()
     @ObservationIgnored private let pathMonitor = NWPathMonitor()
@@ -32,6 +33,16 @@ final class AppModel {
     /// app (Config/Local.xcconfig), if any.
     let builtInClientID = AppModel.infoValue("GChatClientID")
     let builtInOrganization = AppModel.infoValue("GChatOrganization")
+
+    /// Push delivery belongs to the built-in organization: its relay accepts
+    /// only that organization's client and domain.
+    private var pushConfiguration: PushConfiguration? {
+        guard clientID == builtInClientID,
+              let address = AppModel.infoValue("GChatRelayURL"), let url = URL(string: address),
+              let topic = AppModel.infoValue("GChatEventsTopic")
+        else { return nil }
+        return PushConfiguration(relayURL: url, topic: topic)
+    }
 
     private static func infoValue(_ key: String) -> String? {
         guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
@@ -78,7 +89,12 @@ final class AppModel {
 
     func signOut() {
         let auth = auth
-        Task { await auth?.signOut() }
+        let push = push
+        Task {
+            // Deletes the subscription at Google while the tokens still work.
+            await push?.signOut()
+            await auth?.signOut()
+        }
         endSession()
     }
 
@@ -100,9 +116,18 @@ final class AppModel {
         self.store = store
         notifier.requestAuthorization { [weak self] allowed in self?.notificationsAllowed = allowed }
         store.start()
+        if let pushConfiguration {
+            let push = PushController(
+                configuration: pushConfiguration, identity: auth,
+                subscriptions: WorkspaceEventsAPI(client: client), store: store)
+            self.push = push
+            push.start()
+        }
     }
 
     private func endSession() {
+        push?.stop()
+        push = nil
         store?.stop()
         store = nil
         auth = nil

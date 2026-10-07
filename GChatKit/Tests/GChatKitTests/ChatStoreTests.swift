@@ -158,6 +158,57 @@ import Testing
         #expect(store.connectionError == nil)
     }
 
+    @Test func aPushNoticeFetchesAndReportsTheNewMessage() async throws {
+        let store = await makeStore()
+        var reported: [String] = []
+        store.onIncoming = { _, messages in reported += messages.compactMap(\.text) }
+        let later = Date().addingTimeInterval(5)
+        chat.update { state in
+            state.spaces[1].lastActiveTime = later
+            state.messages["spaces/dm"] = [message("hello", in: "spaces/dm", from: "users/ann", at: later)]
+        }
+        await store.handlePush(
+            type: "google.workspace.chat.message.v1.created",
+            subject: "//chat.googleapis.com/spaces/dm", resource: "spaces/dm/messages/hello")
+        #expect(reported == ["hello"])
+        #expect(store.spaces.first?.name == "spaces/dm")
+
+        // The same notice again, as Pub/Sub can deliver twice, reports nothing new.
+        await store.handlePush(
+            type: "google.workspace.chat.message.v1.created",
+            subject: "//chat.googleapis.com/spaces/dm", resource: "spaces/dm/messages/hello")
+        #expect(reported == ["hello"])
+    }
+
+    @Test func pushNoticesUpdateAndDeleteLoadedMessages() async throws {
+        let store = await makeStore()
+        store.selection = "spaces/team"
+        await store.open("spaces/team")
+        #expect(store.transcript(for: "spaces/team").messages.map(\.text) == ["t1"])
+
+        chat.update { $0.messages["spaces/team"]?[0].text = "t1 edited" }
+        await store.handlePush(
+            type: "google.workspace.chat.message.v1.updated",
+            subject: "//chat.googleapis.com/spaces/team", resource: "spaces/team/messages/t1")
+        #expect(store.transcript(for: "spaces/team").messages.map(\.text) == ["t1 edited"])
+
+        await store.handlePush(
+            type: "google.workspace.chat.message.v1.deleted",
+            subject: "//chat.googleapis.com/spaces/team", resource: "spaces/team/messages/t1")
+        #expect(store.transcript(for: "spaces/team").messages.isEmpty)
+    }
+
+    @Test func aPushNoticeForAnUnknownConversationRefreshesTheList() async throws {
+        let store = await makeStore()
+        chat.update { state in
+            state.spaces.append(Space(name: "spaces/new", spaceType: "SPACE", displayName: "New", lastActiveTime: Date()))
+        }
+        await store.handlePush(
+            type: "google.workspace.chat.message.v1.created",
+            subject: "//chat.googleapis.com/spaces/new", resource: "spaces/new/messages/1")
+        #expect(store.space(named: "spaces/new") != nil)
+    }
+
     @Test func openingMarksRead() async throws {
         let store = await makeStore()
         #expect(await eventually { store.unreadCount == 1 })
