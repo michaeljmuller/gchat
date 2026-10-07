@@ -114,8 +114,11 @@ What GChat does:
   the message in a loaded transcript.
 - GChat handles each message once. Pub/Sub can deliver a notice twice.
 - While the stream is open, GChat polls only once a minute, as a safety net.
-  When the stream closes, it polls at the normal rate and connects again,
-  with waits from 1 to 60 seconds.
+  When the stream closes, it polls at the normal rate and connects again.
+  The wait between attempts doubles from 1 second up to 15 minutes, and
+  there is no limit on the number of attempts. After a long failure, GChat
+  can therefore take up to 15 minutes to find that the relay is back.
+  Polling covers that time.
 - The ID token lasts an hour. The relay ends the stream then, and GChat
   connects again with a new token.
 

@@ -34,6 +34,8 @@ public final class PushController {
     private static let lifecyclePrefix = "google.workspace.events.subscription.v1."
     /// Renew when less than this is left of the 7 days that Google allows.
     private static let renewalMargin: TimeInterval = 2 * 24 * 3600
+    /// The wait between attempts doubles from 1 second up to this.
+    private static let longestRetryWait: TimeInterval = 15 * 60
     /// How long the relay must be out of reach before the app says so.
     private static let downAfter: TimeInterval = 30
 
@@ -98,7 +100,7 @@ public final class PushController {
             store.isPushConnected = false
             if Task.isCancelled { break }
             try? await Task.sleep(for: .seconds(delay))
-            delay = min(delay * 2, 60)
+            delay = min(delay * 2, Self.longestRetryWait)
         }
         store.isPushConnected = false
     }
