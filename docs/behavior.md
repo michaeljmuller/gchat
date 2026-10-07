@@ -69,6 +69,13 @@ requests behind each feature are in requirements.md.
 - Files from Google Drive appear as a chip that opens in the browser.
 - Older messages load when the transcript is scrolled to the top, or with
   Load Earlier Messages.
+- When a message arrives and the end of the transcript is in view, the
+  transcript scrolls to show the message, with a small space below it.
+- When a message arrives and the person scrolled up to read older messages,
+  the transcript stays in place. A "New messages" button shows at the
+  bottom. A click on it scrolls to the end.
+- After the person sends a message, the transcript always scrolls to the
+  end.
 - Opening a conversation marks it as read here and in Google Chat on other
   devices. A conversation read on another device becomes read here too.
 

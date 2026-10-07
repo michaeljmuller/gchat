@@ -62,8 +62,23 @@ struct TranscriptView: View {
     let space: Space
     /// Loading older messages on scroll starts only after the first layout has settled.
     @State private var isArmed = false
+    /// Whether the end of the transcript is in view. New messages scroll into
+    /// view only then, so reading older messages is not interrupted.
+    @State private var isAtBottom = true
+    /// A message arrived while the person was reading further up.
+    @State private var hasNewBelow = false
 
     private static let bottomID = "transcript-bottom"
+    /// Space between the last message and the composer.
+    private static let bottomSpace: CGFloat = 12
+    /// How close to the end counts as being at the bottom.
+    private static let bottomTolerance: CGFloat = 40
+
+    /// What the scroll view reports about its position.
+    private struct ScrollState: Equatable {
+        var contentHeight: CGFloat
+        var distanceFromBottom: CGFloat
+    }
 
     var body: some View {
         let transcript = store.transcript(for: space.name)
@@ -81,14 +96,57 @@ struct TranscriptView: View {
                     ForEach(transcript.pending) { pending in
                         PendingRowView(store: store, space: space.name, pending: pending)
                     }
-                    Color.clear.frame(height: 1).id(Self.bottomID)
+                    // The space below the last message is part of this marker,
+                    // not padding, so that scrolling to the marker shows it.
+                    Color.clear.frame(height: Self.bottomSpace).id(Self.bottomID)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.top, 12)
             }
             .defaultScrollAnchor(.bottom)
-            .onChange(of: transcript.pending.count) {
-                proxy.scrollTo(Self.bottomID, anchor: .bottom)
+            .onScrollGeometryChange(for: ScrollState.self) { geometry in
+                ScrollState(
+                    contentHeight: geometry.contentSize.height,
+                    distanceFromBottom: geometry.contentSize.height + geometry.contentInsets.bottom
+                        - geometry.contentOffset.y - geometry.containerSize.height)
+            } action: { old, new in
+                // Content grew while the end was in view: a new message, or an
+                // image that finished loading. Keep the end in view.
+                if new.contentHeight > old.contentHeight, old.distanceFromBottom < Self.bottomTolerance,
+                   new.distanceFromBottom >= Self.bottomTolerance {
+                    scrollToBottom(proxy)
+                    return
+                }
+                isAtBottom = new.distanceFromBottom < Self.bottomTolerance
+                if isAtBottom { hasNewBelow = false }
+            }
+            .onChange(of: transcript.pending.count) { old, new in
+                // The person sent a message: always show it.
+                if new > old { scrollToBottom(proxy) }
+            }
+            .onChange(of: transcript.messages.last?.name) {
+                if isAtBottom {
+                    scrollToBottom(proxy)
+                } else if transcript.isLoaded {
+                    hasNewBelow = true
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if hasNewBelow {
+                    Button {
+                        scrollToBottom(proxy)
+                    } label: {
+                        Label("New messages", systemImage: "arrow.down")
+                            .font(.callout.weight(.medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.regularMaterial, in: Capsule())
+                            .overlay { Capsule().strokeBorder(.separator) }
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 10)
+                    .transition(.opacity)
+                }
             }
         }
         .overlay {
@@ -109,6 +167,17 @@ struct TranscriptView: View {
         .task {
             try? await Task.sleep(for: .seconds(1))
             isArmed = true
+        }
+    }
+
+    /// Scrolls to the very end, including the space below the last message.
+    /// Deferred one turn, so that the new row is laid out first.
+    private func scrollToBottom(_ proxy: ScrollViewProxy) {
+        hasNewBelow = false
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.15)) {
+                proxy.scrollTo(Self.bottomID, anchor: .bottom)
+            }
         }
     }
 

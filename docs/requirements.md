@@ -88,6 +88,10 @@ All in the Settings window (October 2, 2026, unless stated):
 
 ## Messages and attachments
 
+- When a message comes in, the view scrolls down to show it. (October 6,
+  2026)
+- The scroll goes all the way down. The newest message does not sit against
+  the input field. (October 7, 2026)
 - A click on an image must not open a browser page that fails. (October 2,
   2026)
 - Images shown in the conversation. (October 2, 2026)
