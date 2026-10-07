@@ -121,7 +121,8 @@ public final class PushController {
             store.isPushConnected = false
             if Task.isCancelled { break }
             // The wait is its own task, so that noteActivity can end it early.
-            let wait = Task<Void, Never> { _ = try? await Task.sleep(for: .seconds(delay)) }
+            let seconds = delay
+            let wait = Task<Void, Never> { _ = try? await Task.sleep(for: .seconds(seconds)) }
             retryWait = wait
             await wait.value
             retryWait = nil
