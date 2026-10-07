@@ -140,6 +140,32 @@ This also makes a search of message text possible.
 Not verified yet: the largest page size of messages.list.
 
 
+## Scroll to new messages
+
+When a message arrives in the open conversation, the transcript must scroll
+down to show it. Today it scrolls only after the person sends a message. A
+message from someone else can arrive below the visible area, with no sign of
+it. See TranscriptView in GChat/Views/ConversationView.swift. The transcript
+uses defaultScrollAnchor(.bottom), which does not reliably follow new
+content.
+
+Decide first: what happens when the person has scrolled up to read older
+messages. The usual behavior in Mac chat apps:
+
+- If the transcript is at the bottom, scroll to the new message.
+- If the person scrolled up, stay in place and show a "New messages" button
+  at the bottom. A click on it scrolls down.
+
+Work:
+
+- Track whether the transcript is at the bottom.
+- Scroll on each new message from the server, not only on a sent message.
+- The "New messages" button, if chosen.
+- Images that load after the scroll change the height of the transcript.
+  Make sure that the last message stays visible when an image above it
+  loads.
+
+
 ## Notifications
 
 GChat posts a notification for each new message from another person in a
