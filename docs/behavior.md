@@ -37,6 +37,9 @@ requests behind each feature are in requirements.md.
 - Conversations are sorted by most recent activity, or alphabetically
   (configuration).
 - A line at the bottom of the sidebar shows connection problems.
+- When the relay is out of reach for 30 seconds or more, that line shows "New
+  message notification server is down; polling for new messages every 15
+  seconds." It goes away when the relay answers again.
 - Opening a conversation from Command-K, a shortcut or a notification selects
   its tab.
 

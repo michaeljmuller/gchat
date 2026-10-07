@@ -34,6 +34,8 @@ public final class PushController {
     private static let lifecyclePrefix = "google.workspace.events.subscription.v1."
     /// Renew when less than this is left of the 7 days that Google allows.
     private static let renewalMargin: TimeInterval = 2 * 24 * 3600
+    /// How long the relay must be out of reach before the app says so.
+    private static let downAfter: TimeInterval = 30
 
     struct RelayRefused: Error {
         var status: Int
@@ -61,6 +63,7 @@ public final class PushController {
         task?.cancel()
         task = nil
         store.isPushConnected = false
+        store.isPushDown = false
     }
 
     /// Stops, and deletes the subscription at Google so that no more events
@@ -74,16 +77,23 @@ public final class PushController {
 
     private func run() async {
         var delay = 1.0
+        // When the current run of failures began. The sidebar reports the relay
+        // as down only after a while, so that a short interruption shows nothing.
+        var failingSince: Date?
         while !Task.isCancelled {
             do {
                 let subscription = try await ensureSubscription()
                 try await listen(to: subscription)
                 // The stream ended normally, for example for a new ID token.
                 delay = 1
+                failingSince = nil
             } catch is CancellationError {
                 break
             } catch {
                 Self.log.error("Push failed: \(String(describing: error), privacy: .public)")
+                let since = failingSince ?? Date()
+                failingSince = since
+                if Date().timeIntervalSince(since) >= Self.downAfter { store.isPushDown = true }
             }
             store.isPushConnected = false
             if Task.isCancelled { break }
@@ -159,6 +169,7 @@ public final class PushController {
 
         Self.log.info("Connected to the relay")
         store.isPushConnected = true
+        store.isPushDown = false
         defer { store.isPushConnected = false }
         // The relay keeps nothing for clients that were away.
         await store.catchUp()

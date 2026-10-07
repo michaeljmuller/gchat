@@ -19,8 +19,6 @@ Push delivery works for the Zia Consulting build (design.md). Left:
 - Whether a subscription to all spaces covers a conversation that starts
   later. If not, GChat renews the subscription when the conversation list
   grows.
-- Show in the app whether messages arrive by push or by polling. Today only
-  the log shows it (category "push").
 - One relay serves one Cloud project. Serving a second organization needs a
   second relay, or a relay that accepts pushes from several Pub/Sub
   subscriptions.

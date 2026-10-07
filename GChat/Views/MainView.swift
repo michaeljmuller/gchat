@@ -124,7 +124,7 @@ struct SidebarView: View {
         .searchable(text: $search, placement: .sidebar, prompt: "Search")
         .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 400)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let error = store.connectionError {
+            if let error = store.connectionError ?? relayDownMessage {
                 Label(error, systemImage: "wifi.exclamationmark")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -135,6 +135,13 @@ struct SidebarView: View {
                     .help(error)
             }
         }
+    }
+
+    /// Shown while the relay is out of reach and the app polls instead.
+    private var relayDownMessage: String? {
+        guard store.isPushDown else { return nil }
+        return "New message notification server is down; polling for new messages every "
+            + "\(ChatStore.listPollSeconds) seconds."
     }
 
     /// Applies the search field and the sidebar settings. The store's order is most recent first.

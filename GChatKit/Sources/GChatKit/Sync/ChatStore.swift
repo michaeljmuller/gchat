@@ -61,6 +61,12 @@ public final class ChatStore {
     /// True while the stream to the relay is open. Polling then slows to a
     /// safety net. Set by PushController.
     public var isPushConnected = false
+    /// True when the relay has been out of reach for a while, so the app is
+    /// back to polling at its normal rate. Set by PushController. Shown in the
+    /// sidebar.
+    public var isPushDown = false
+    /// How often the conversation list is polled while the app is in front.
+    public static let listPollSeconds = 15
 
     /// Called with new messages from other people in a conversation that is not in front.
     @ObservationIgnored public var onIncoming: ((Space, [Message]) -> Void)?

@@ -110,6 +110,9 @@ All in the Settings window (October 2, 2026, unless stated):
   (October 6, 2026)
 - No extra step for colleagues: "I'd like someone to just sign in, accept
   the grant for access to Google, and be running." (October 6, 2026)
+- A sign in the app when the relay is down and the app polls: "New message
+  notification server is down; polling for new messages every X second."
+  (October 7, 2026)
 - No message content on the owner's server. A compromised server can show
   that a message arrived, but not what it says. (October 6, 2026)
 
