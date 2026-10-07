@@ -64,6 +64,42 @@ out:
 - Sending images (upload).
 
 
+## Consider a different name
+
+Not decided. The owner is not sure that the problem is large enough for the
+work (October 7, 2026).
+
+The name GChat is close to "Google Chat". Two problems follow:
+
+- Confusion. During the Cloud setup, Google's own account
+  chat-api-push@system.gserviceaccount.com looked like a part of this
+  project.
+- If the app becomes public, the name suggests a Google product. Google can
+  object to that.
+
+A rename is not a rewrite, but it changes many names at once:
+
+- The bundle ID org.themullers.gchat. The OAuth client is registered for
+  it, and macOS ties the Keychain item, the preferences, the cache and the
+  notification permission to it. With a new bundle ID, each person signs in
+  again and allows notifications again. The OAuth client of each
+  organization needs the new bundle ID.
+- The app name, the Xcode project and its targets, the GChatKit package,
+  the Keychain item "GChat Google sign-in", and the text in the app.
+- The relay: the address gchat-relay.themullers.org, the Compose project
+  name gchat, the port registry, the Caddy block and the DNS record.
+- The Cloud resources gchat-events and gchat-relay. These names are
+  internal, so they can stay.
+- The repository on GitHub and the link in the About window.
+- All documents.
+
+A rename is cheapest before colleagues install the app. After that, each
+installed copy loses its sign-in at the update.
+
+A smaller step, if the name stays: say in the app and in install.md that
+GChat is not a Google product. install.md and the README already say so.
+
+
 ## A designed icon
 
 The icon is a placeholder that a script drew: a green rounded square with a
