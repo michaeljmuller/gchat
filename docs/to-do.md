@@ -26,7 +26,7 @@ deployment-relay.md). Left:
   second relay, or a relay that accepts pushes from several Pub/Sub
   subscriptions.
 
-## Before the Google Cloud free trial ends
+## End the Google Cloud free trial when push delivery works
 
 The billing account of the Zia Consulting Cloud project started as a Google
 Cloud free trial in October 2026. The trial normally lasts 90 days, so it
@@ -34,9 +34,10 @@ ends about January 2027. Billing > Overview shows the exact date. Until then,
 Google charges nothing, and paid services stop when the trial ends or its
 credit runs out.
 
-When the trial ends, Pub/Sub stops for the project, and push delivery stops.
-GChat then falls back to polling. To keep push delivery, the owner does
-these steps one or two weeks before the end:
+The owner wants to end the trial as soon as push delivery works from end to
+end, not at the end of the trial period. If the trial ends first, Pub/Sub
+stops for the project, push delivery stops, and GChat falls back to
+polling. Steps:
 
 1. Click "Activate full account" in Billing. After that, charges go to the
    owner's card.
