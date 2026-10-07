@@ -66,7 +66,10 @@ at its public address before step 9, because Pub/Sub starts pushing at once.
      few kB a minute.
    If the limit is too low, Pub/Sub refuses events, and GChat gets the
    messages later, through its refresh.
-5. Go to Pub/Sub > Topics and click Create topic. For Topic ID, type
+5. Go to Pub/Sub > Topics and click Create topic. Pub/Sub is a product in
+   the main menu of the console, not a page under APIs & Services. If the
+   menu does not show it, click "View all products", or open
+   https://console.cloud.google.com/cloudpubsub/topic/list. For Topic ID, type
    gchat-events. Clear "Add a default subscription". Click Create.
 6. Open the topic, open its Permissions, and click Add principal. For the
    principal, type chat-api-push@system.gserviceaccount.com. For the role,
