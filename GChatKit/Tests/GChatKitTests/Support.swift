@@ -70,6 +70,9 @@ final class FakeChat: ChatService, @unchecked Sendable {
         var readTimes: [String: Date] = [:]
         var members: [String: [Membership]] = [:]
         var sendFails = false
+        /// Returns the message at the `after` time too, as Google does when
+        /// the time in the filter is cut to microseconds.
+        var listsFromAfterInclusive = false
         /// Every conversation list request answers 429 while this is set.
         var throttled = false
         var listCalls = 0
@@ -97,9 +100,9 @@ final class FakeChat: ChatService, @unchecked Sendable {
     }
 
     func listMessages(in space: String, pageSize: Int, pageToken: String?, after: Date?) async throws -> MessagePage {
-        let all = update { $0.messages[space] ?? [] }
+        let (all, inclusive) = update { ($0.messages[space] ?? [], $0.listsFromAfterInclusive) }
         let matching = all
-            .filter { after == nil || $0.createTime! > after! }
+            .filter { after == nil || $0.createTime! > after! || (inclusive && $0.createTime! == after!) }
             .sorted { $0.createTime! > $1.createTime! }
         return MessagePage(messages: matching)
     }

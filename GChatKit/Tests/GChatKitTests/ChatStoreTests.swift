@@ -180,6 +180,43 @@ import Testing
         #expect(reported == ["hello"])
     }
 
+    @Test func aPushNoticeAnnouncesOnlyTheMessageItNames() async throws {
+        let store = await makeStore()
+        var reported: [String] = []
+        store.onIncoming = { _, messages in reported += messages.compactMap(\.text) }
+        // The conversation's last known message is from Ann, at exactly the
+        // last activity time. The person then sends "mine" from another device.
+        let earlier = try #require(store.space(named: "spaces/dm")?.lastActiveTime)
+        chat.update { state in
+            state.messages["spaces/dm"] = [
+                message("previous", in: "spaces/dm", from: "users/ann", at: earlier),
+                message("mine", in: "spaces/dm", from: "users/me-id", at: Date()),
+            ]
+        }
+        await store.handlePush(
+            type: "google.workspace.chat.message.v1.created",
+            subject: "//chat.googleapis.com/spaces/dm", resource: "spaces/dm/messages/mine")
+        #expect(reported.isEmpty)
+    }
+
+    @Test func pollingDoesNotAnnounceTheLastKnownMessageAgain() async throws {
+        let store = await makeStore()
+        var reported: [String] = []
+        store.onIncoming = { _, messages in reported += messages.compactMap(\.text) }
+        let earlier = try #require(store.space(named: "spaces/dm")?.lastActiveTime)
+        let later = Date().addingTimeInterval(5)
+        chat.update { state in
+            state.listsFromAfterInclusive = true
+            state.spaces[1].lastActiveTime = later
+            state.messages["spaces/dm"] = [
+                message("previous", in: "spaces/dm", from: "users/ann", at: earlier),
+                message("new", in: "spaces/dm", from: "users/ann", at: later),
+            ]
+        }
+        await store.refreshSpaces()
+        #expect(reported == ["new"])
+    }
+
     @Test func pushNoticesUpdateAndDeleteLoadedMessages() async throws {
         let store = await makeStore()
         store.selection = "spaces/team"

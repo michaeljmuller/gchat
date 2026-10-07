@@ -85,6 +85,8 @@ public final class ChatStore {
     @ObservationIgnored private var titleAttempts: Set<String> = []
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var lastSafetyPoll = Date.distantPast
+    /// Names of messages that were already added, notified or marked read.
+    @ObservationIgnored private var handledMessages: Set<String> = []
     @ObservationIgnored private var reportedUnread = -1
     @ObservationIgnored private var refreshCount = 0
 
@@ -305,7 +307,13 @@ public final class ChatStore {
                 await refreshSpaces()
                 return
             }
-            await ingest(in: space, since: space.lastActiveTime, changed: true)
+            // Fetch the message that the notice names. The message list can
+            // lag behind the notice by a moment.
+            if let resource, let message = try? await chat.getMessage(resource) {
+                await process([message], in: space, changed: true)
+            } else {
+                await ingest(in: space, since: space.lastActiveTime, changed: true)
+            }
         case WorkspaceEventsAPI.messageUpdated:
             guard let resource, transcripts[name]?.isLoaded == true,
                   let message = try? await chat.getMessage(resource),
@@ -634,10 +642,29 @@ public final class ChatStore {
             return
         }
 
+        // The filter is sent to Google cut to microseconds, so the message at
+        // `after` itself can come back. It is not new.
+        await process(incoming.filter { ($0.createTime ?? .distantFuture) > after }, in: space, changed: changed)
+    }
+
+    /// Takes messages that may be new: adds them to a loaded transcript, and
+    /// notifies or marks read. Each message is handled once, however often it
+    /// arrives, so a notice that Pub/Sub delivers twice does nothing twice.
+    private func process(_ incoming: [Message], in space: Space, changed: Bool) async {
+        let name = space.name
+        let isLoaded = transcripts[name]?.isLoaded == true
         let known = Set(transcripts[name]?.messages.map(\.name) ?? [])
         let fresh = incoming
-            .filter { !known.contains($0.name) }
+            .filter { !known.contains($0.name) && !handledMessages.contains($0.name) }
             .sorted { ($0.createTime ?? .distantPast) < ($1.createTime ?? .distantPast) }
+        for message in fresh {
+            handledMessages.insert(message.name)
+            Self.log.info("""
+                New message in \(name, privacy: .public): sender \(message.sender?.name ?? "none", privacy: .public), \
+                me \(self.me?.user ?? "unknown", privacy: .public), mine \(self.isMine(message))
+                """)
+        }
+        if handledMessages.count > 2000 { handledMessages.removeAll() }
         if isLoaded {
             merge(fresh, into: name)
         } else {
