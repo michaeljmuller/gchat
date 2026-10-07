@@ -92,12 +92,21 @@ at its public address before step 9, because Pub/Sub starts pushing at once.
    only checks the signature. The person who makes the push subscription in
    step 9 needs the role Service Account User on this account. A project
    Owner has it already.
-8. Allow Pub/Sub to sign as the service account. Go to IAM & Admin > IAM,
-   and select "Include Google-provided role grants". Find the principal
-   service-<project number>@gcp-sa-pubsub.iam.gserviceaccount.com. If it
-   does not have the role Service Account Token Creator, open the gchat-relay
-   service account, open Permissions, and grant that role to this
-   principal. Not verified yet: whether new projects have the grant already.
+8. Allow Pub/Sub to sign as the service account.
+   - Go to IAM & Admin > IAM, and select "Include Google-provided role
+     grants". Copy the address of the principal
+     service-<project number>@gcp-sa-pubsub.iam.gserviceaccount.com. This is
+     the service agent of Pub/Sub for the project.
+   - Go to IAM & Admin > Service Accounts, open the gchat-relay account, and
+     open "Principals with access".
+   - Click Grant access. For the principal, paste the address of the service
+     agent. For the role, select Service Accounts > Service Account Token
+     Creator. Click Save.
+
+   The grant applies to the gchat-relay account only. The service agent
+   already has the project role Cloud Pub/Sub Service Agent. Not verified
+   yet: whether that role is enough without this grant. The grant removes
+   the doubt.
 9. Go to Pub/Sub > Subscriptions and click Create subscription:
    - Subscription ID: gchat-relay.
    - Topic: gchat-events.
@@ -120,6 +129,10 @@ The values for the release manager:
     ALLOWED_DOMAINS       the Workspace domain, for example ziaconsulting.com
 
 None of these values is a secret. The host holds no Google credentials.
+
+For Zia Consulting, the project ID is chat-510420, and steps 1 to 8 were done
+on October 7, 2026. The values are in src/docker/.env on the owner's Mac,
+which is not in git.
 
 One relay accepts pushes from one Pub/Sub subscription, so it serves the
 organization of one Cloud project. A second organization needs a second
