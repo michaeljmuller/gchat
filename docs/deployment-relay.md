@@ -45,8 +45,9 @@ at its public address before step 9, because Pub/Sub starts pushing at once.
    spending.
    - In Billing, click Budgets & alerts, then Create budget.
    - Name: GChat. Scope: this project only, all services. Click Next.
-   - Budget type: Specified amount. Target amount: 5 US dollars. Click
-     Next.
+   - Budget type: Specified amount. Target amount: a small amount, for
+     example 5 to 20 US dollars. Click Next. The Zia Consulting project has
+     20.
    - Keep the thresholds 50%, 90% and 100% of actual spend, and keep the
      email to billing admins and users. Click Finish.
 
@@ -54,13 +55,17 @@ at its public address before step 9, because Pub/Sub starts pushing at once.
    Workspace Events API". Do not use Pub/Sub Lite, which is a different
    product that Google is retiring.
 4. Optional: set a hard limit with a quota. A lower quota makes Pub/Sub
-   refuse traffic above a rate, so a fault cannot cause a large bill. Go to
-   APIs & Services > Cloud Pub/Sub API > Quotas & System Limits, find the
-   publisher throughput quota for the project, and lower it. A rate of
-   about 1 MB a minute is far above the expected use. If the limit is too
-   low, Pub/Sub refuses events, and GChat gets messages later, through its
-   refresh. Not verified yet: the exact name and unit of the quota in the
-   console.
+   refuse traffic above a rate, so a fault cannot cause a large bill.
+   Google does not allow quota changes on a free trial billing account. A
+   free trial charges nothing, and stops paid services at its end (to-do.md).
+   - Go to APIs & Services > Cloud Pub/Sub API > Quotas & System Limits.
+   - Filter for "Regional publisher throughput, kB per minute per region".
+     There is one row for each region. The region where Google Chat
+     publishes is not known, so select all rows.
+   - Click Edit quotas and set 1000 (1 MB a minute). The expected use is a
+     few kB a minute.
+   If the limit is too low, Pub/Sub refuses events, and GChat gets the
+   messages later, through its refresh.
 5. Go to Pub/Sub > Topics and click Create topic. For Topic ID, type
    gchat-events. Clear "Add a default subscription". Click Create.
 6. Open the topic, open its Permissions, and click Add principal. For the
