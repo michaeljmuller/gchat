@@ -69,6 +69,9 @@ struct TranscriptView: View {
     @State private var isAtBottom = true
     /// A message arrived while the person was reading further up.
     @State private var hasNewBelow = false
+    /// Until then, movement of the view is the app's own doing: content that
+    /// just loaded, or a scroll that the app started.
+    @State private var settlingUntil = Date.distantPast
 
     private static let bottomID = "transcript-bottom"
     /// Space between the last message and the composer.
@@ -108,19 +111,24 @@ struct TranscriptView: View {
             }
             .defaultScrollAnchor(.bottom)
             .onScrollGeometryChange(for: ScrollState.self) { geometry in
+                // visibleRect is the part of the content that shows, in content
+                // coordinates. It leaves out the area under the title bar, which
+                // the offset and the container size include. A first version
+                // computed the distance from those and was always 52 points off.
                 ScrollState(
                     contentHeight: geometry.contentSize.height,
-                    offset: geometry.contentOffset.y,
-                    distanceFromBottom: geometry.contentSize.height + geometry.contentInsets.bottom
-                        - geometry.contentOffset.y - geometry.containerSize.height)
+                    offset: geometry.visibleRect.minY,
+                    distanceFromBottom: geometry.contentSize.height - geometry.visibleRect.maxY)
             } action: { old, new in
                 if new.distanceFromBottom < Self.bottomTolerance {
                     // The end is in view, however it got there.
                     isAtBottom = true
                     hasNewBelow = false
-                } else if new.offset < old.offset - 0.5 {
+                } else if new.offset < old.offset - 0.5, Date() > settlingUntil {
                     // The view moved up and the end is out of view: the person
-                    // scrolled up. The app itself only ever scrolls down here.
+                    // scrolled up. The app itself only ever scrolls down here,
+                    // but rows that are still being laid out can shift the view
+                    // up for a moment, which settlingUntil covers.
                     isAtBottom = false
                 } else if new.contentHeight > old.contentHeight, isAtBottom {
                     // Content grew below while the person was at the end: a new
@@ -133,6 +141,7 @@ struct TranscriptView: View {
                 if new > old { scrollToBottom(proxy) }
             }
             .onChange(of: transcript.messages.last?.name) {
+                settlingUntil = Date().addingTimeInterval(0.5)
                 if isAtBottom {
                     scrollToBottom(proxy)
                 } else if transcript.isLoaded {
@@ -182,6 +191,7 @@ struct TranscriptView: View {
     /// Deferred one turn, so that the new row is laid out first.
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
         hasNewBelow = false
+        settlingUntil = Date().addingTimeInterval(0.5)
         DispatchQueue.main.async {
             withAnimation(.easeOut(duration: 0.15)) {
                 proxy.scrollTo(Self.bottomID, anchor: .bottom)

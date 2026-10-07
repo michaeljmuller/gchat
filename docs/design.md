@@ -333,7 +333,14 @@ counts as at the end until the person scrolls up: the view moves up, and
 the end is more than 40 points out of view. Growth of the content and the
 app's own scrolls do not count, because they also change the distance to
 the end. A first version measured only the distance, and showed the "New
-messages" button when a conversation opened with new messages. While the
+messages" button when a conversation opened. The second version still did.
+A log of the measurements showed the cause: the distance came from the
+scroll offset and the container size, which include the 52 points under the
+title bar, so the view never measured as at the end. The distance now comes
+from the visible rectangle that SwiftUI reports. Movement of the view
+within half a second after the app loads or scrolls the transcript does not
+count as a scroll by the person, because rows that are still being laid out
+can shift the view. While the
 person is at the end, a new message, or an image that finishes loading,
 scrolls the end back into view. If the person scrolled up, the
 transcript stays in place and shows a "New messages" button, because a jump
