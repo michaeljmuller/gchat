@@ -7,23 +7,24 @@ behavior.md.
 
 ## Push delivery: what is left
 
-The design and the relay are done (design.md, api-contract.md,
-deployment.md). Left:
+Push delivery works for the Zia Consulting build (design.md). Left:
 
-- In GChat: get an ID token at sign-in and at each refresh, make and renew
-  the Workspace Events subscription with includeResource false, keep the
-  stream to the relay open and reconnect, fetch on each notice, and slow
-  polling to about once a minute while the stream works.
-- A new scope for Workspace Events, if the Chat scopes are not enough. Not
-  verified yet.
-- Look at a real event without resource data, and make sure that it holds
-  only identifiers (design.md, security rule 1).
-- Whether a subscription to all spaces covers spaces that the person joins
-  later. Not verified yet. If not, GChat renews it when the conversation
-  list grows.
+- Deploy the relay again. The commit of October 7, 2026, makes it send a
+  line when a stream opens. Without it, each connection waits 20 seconds
+  for the first keepalive.
+- Look at the bytes of a real event, and make sure that it holds only
+  identifiers (design.md, security rule 1).
+- A notification for a message from another person has not been seen yet.
+  The test message was the owner's own.
+- Whether a subscription to all spaces covers a conversation that starts
+  later. If not, GChat renews the subscription when the conversation list
+  grows.
+- Show in the app whether messages arrive by push or by polling. Today only
+  the log shows it (category "push").
 - One relay serves one Cloud project. Serving a second organization needs a
   second relay, or a relay that accepts pushes from several Pub/Sub
   subscriptions.
+- End the Google Cloud free trial (next item).
 
 ## End the Google Cloud free trial when push delivery works
 

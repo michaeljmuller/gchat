@@ -97,6 +97,17 @@ requests behind each feature are in requirements.md.
   triangle, closes the panel.
 
 
+## Message delivery
+
+- In a build with a relay, signed in to the organization of the build, new
+  messages arrive within about a second, in every conversation.
+- Messages that someone edits or deletes change in an open conversation at
+  once.
+- Without a relay, or when the relay cannot be reached, GChat polls: the
+  open conversation every 3 seconds, and the conversation list every 15
+  seconds. Edits and deletions then show at the next launch.
+
+
 ## Notifications and the Dock
 
 - GChat posts a notification for each new message from another person in a

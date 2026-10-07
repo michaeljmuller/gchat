@@ -44,8 +44,8 @@ opens System Settings.
   must go through chat.google.com.
 - Command-K jumps to a conversation by name. Return sends a message.
   Shift-Return adds a line break.
-- New messages show within a few seconds. A notification can take up to 15
-  seconds, because GChat asks Google for new messages at intervals.
+- New messages show within about a second. If the relay of GChat cannot be
+  reached, they can take up to 15 seconds.
 - Closing the window leaves GChat running, so notifications continue. A
   setting changes this.
 - GChat cannot reply inside a thread, add reactions, edit or delete

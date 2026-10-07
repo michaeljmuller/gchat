@@ -73,9 +73,11 @@ progress; see "Push delivery" below.
 
 ## Push delivery
 
-Status, October 7, 2026: the relay runs at gchat-relay.themullers.org, and
-a test message published by hand reached it through Pub/Sub with a valid
-signature. GChat does not use the relay yet.
+Status, October 7, 2026: push delivery works from end to end for the Zia
+Consulting build. A message sent in Google Chat reached GChat as a notice
+through the relay, and GChat had the message 0.4 seconds after the notice.
+Builds without a relay address, and sign-ins to another organization, poll
+as before.
 
 Google can announce new messages through the Workspace Events API. GChat
 makes one Workspace Events subscription for the person signed in, with the
@@ -91,7 +93,31 @@ after a poll.
                                                                        |
     GChat <-- message text, with the person's own sign-in <-- Chat API +
 
-The relay is in src/python/relay. Its interface is in api-contract.md.
+The relay is in src/python/relay. Its interface is in api-contract.md. In
+GChat, PushController (GChatKit/Sources/GChatKit/Push) makes and renews the
+subscription and reads the stream, and ChatStore.handlePush acts on each
+notice.
+
+What GChat does:
+
+- It makes the subscription with the Chat permissions that it already has.
+  No new scope is needed. Google allows one subscription for each person
+  and target, so a second Mac of the same person adopts the first Mac's
+  subscription, and both Macs get every notice.
+- A subscription without resource data lasts 7 days. GChat renews it at
+  each connection when less than 2 days are left, and when Google sends an
+  expiration reminder. Sign Out deletes it.
+- On a notice for a new message, GChat fetches the message that the notice
+  names. It does not list the conversation, because the list can lag behind
+  the notice.
+- On a notice for a changed or deleted message, GChat updates or removes
+  the message in a loaded transcript.
+- GChat handles each message once. Pub/Sub can deliver a notice twice.
+- While the stream is open, GChat polls only once a minute, as a safety net.
+  When the stream closes, it polls at the normal rate and connects again,
+  with waits from 1 to 60 seconds.
+- The ID token lasts an hour. The relay ends the stream then, and GChat
+  connects again with a new token.
 
 ### Security rules
 
@@ -110,8 +136,13 @@ messages and when, as opaque identifiers. The attacker cannot read messages
 or change subscriptions. A false notice only makes GChat fetch and find
 nothing new.
 
-Not verified yet: that an event without resource data holds only
-identifiers. Look at a real event before relying on rule 1.
+Google gives a subscription without resource data the 7 day lifetime, which
+it reserves for such subscriptions. Not verified yet: the bytes of a real
+event. To look at one, make a second, pull subscription on the topic in the
+Cloud console, send a chat message, and click Pull.
+
+Not verified yet: whether a subscription to all spaces covers a
+conversation that starts later.
 
 ### Routing
 

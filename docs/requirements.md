@@ -139,3 +139,5 @@ one:
   message "Google asked GChat to slow down".
 - A list of people from existing conversations in the New Conversation sheet,
   when the directory is not available.
+- Edited and deleted messages change in an open conversation at once, when
+  push delivery works. The events for them came with push delivery.
