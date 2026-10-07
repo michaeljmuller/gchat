@@ -180,9 +180,13 @@ Account:
 
 ## About window
 
-GChat > About GChat shows "Version" with the commit ID and, in brackets, the
-build number, then the build date and a link to the source code. A
-development build shows "Version development".
+GChat > About GChat shows:
+
+- "Version" with the commit ID and, in brackets, the build number. A
+  development build shows "Version development" with no build number.
+- The line "A vibe-coded native Mac application for Google Chat."
+- The build date, for a release.
+- A link to the source code.
 
 
 ## Messages sent from GChat
