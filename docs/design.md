@@ -67,8 +67,79 @@ or 30 seconds in the background. A message that someone edits or deletes
 elsewhere does not change in GChat until the next launch, because polling
 asks only for new messages.
 
-Deferred: push delivery through the Workspace Events API and Pub/Sub. See
-to-do.md.
+Push delivery through a relay replaces most of this polling. It is in
+progress; see "Push delivery" below.
+
+
+## Push delivery
+
+Status, October 6, 2026: the relay is built, GChat does not use it yet.
+
+Google can announce new messages through the Workspace Events API. GChat
+makes one Workspace Events subscription for the person signed in, with the
+target //chat.googleapis.com/spaces/-, which means all spaces of that person.
+Google publishes the events to a Pub/Sub topic in the organization's Cloud
+project. A relay on the owner's Hetzner host reads the topic and passes each
+event to the copy of GChat that made the subscription. GChat then fetches
+the new messages from the Chat API with the person's own sign-in, as it does
+after a poll.
+
+    Google Chat --> Workspace Events --> Pub/Sub topic --> relay --> GChat
+                                                                       |
+    GChat <-- message text, with the person's own sign-in <-- Chat API +
+
+The relay is in src/python/relay. Its interface is in api-contract.md.
+
+### Security rules
+
+1. Events carry no content. GChat makes each subscription with
+   includeResource set to false. Events then hold identifiers and times
+   only: which conversation, which message, when.
+2. The relay can only read events. Its service account has the Pub/Sub
+   Subscriber role on one Pub/Sub subscription, and no other role.
+3. GChat sends the relay only a Google ID token. An ID token proves who the
+   person is, expires within an hour, and cannot call Google APIs.
+
+If the host is compromised, the attacker sees which conversations get
+messages and when, as opaque identifiers. The attacker cannot read messages
+or change subscriptions. A false notice only makes GChat fetch and find
+nothing new.
+
+Not verified yet: that an event without resource data holds only
+identifiers. Look at a real event before relying on rule 1.
+
+### Routing
+
+Events carry the name of the Workspace Events subscription that produced
+them (the CloudEvents attribute ce-source). Google makes the name, and only
+the person who made the subscription, the relay and Google know it. GChat
+connects to the relay with the subscription name and an ID token. The relay
+binds the name to the user ID in the token at the first connection, and
+refuses the name to any other user afterwards. A bound name stays bound
+until the relay restarts. Then the next connection binds it again.
+
+Each Mac makes its own Workspace Events subscription, so two Macs of one
+person each get every event. Debug builds and releases on one Mac share
+their saved state, so they share one subscription.
+
+The relay keeps no queue. It acknowledges each Pub/Sub message after it
+passes the event on. Events for a copy of GChat that is not connected are
+lost. GChat refreshes the conversation list when it connects, so it catches
+up, and it keeps a slow poll as a safety net.
+
+### Options considered
+
+- One shared topic, read by each Mac. Rejected: anybody allowed to read the
+  topic gets the events of every colleague. Each person also needs a broad
+  Pub/Sub permission at sign-in.
+- One topic for each colleague, made by the owner with a script. Full
+  isolation and no server, but a setup step for each new colleague, and the
+  same broad Pub/Sub permission at sign-in.
+- The relay (chosen). Colleagues only sign in, and the permission screen
+  does not change. The cost is a service to build, secure and run, and a
+  service account key on the host.
+- Faster polling, every 5 seconds. Considered as an interim step. The owner
+  preferred push.
 
 
 ## Read markers

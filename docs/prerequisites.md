@@ -11,8 +11,17 @@ release.md.
 - Xcode 16 or later, the full app from the App Store. Development used
   Xcode 27.
 - git.
+- Docker Desktop, for the relay. It is built, run and tested in containers,
+  so no Python is installed on the Mac.
 
-Nothing else is installed. GChat has no third-party dependencies.
+Nothing else is installed. The Mac app has no third-party dependencies.
+
+
+## On the host
+
+For the relay: the Hetzner host with rootless Podman and Caddy, a DNS record
+for gchat-relay.themullers.org, and host port 8086. Details are in
+deployment-relay.md.
 
 
 ## Apple accounts and certificates
@@ -45,6 +54,10 @@ Nothing else is installed. GChat has no third-party dependencies.
 - For a build with a built-in client ID: Config/Local.xcconfig with the
   client ID and the organization name. Copy Config/Local.xcconfig.example.
   The file is not in git.
+
+For push delivery: Pub/Sub, the Workspace Events API, a topic, a
+subscription and a service account key in the same Cloud project. The steps
+are in deployment-relay.md.
 
 Optional, for the list of everyone in the New Conversation sheet: the
 organization lets apps read its directory. See

@@ -53,6 +53,17 @@ The views have no automated tests. Changes to the views need a review on
 screen.
 
 
+## The relay
+
+The relay is a Python service in src/python/relay. It runs in a container
+on the Mac, with nothing installed. Its tests:
+
+    cd src/docker
+    docker compose --profile tools run --rm --build tests
+
+Running it locally, and deploying it, are in deployment-relay.md.
+
+
 ## Development icon
 
 Debug builds use the icon in GChat/Assets.xcassets/AppIconDev.appiconset: the

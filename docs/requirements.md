@@ -94,6 +94,16 @@ All in the Settings window (October 2, 2026, unless stated):
 - The pointing-hand cursor over links. (October 2, 2026)
 
 
+## Prompt delivery
+
+- New messages without the delay of polling. "polling's kinda janky."
+  (October 6, 2026)
+- No extra step for colleagues: "I'd like someone to just sign in, accept
+  the grant for access to Google, and be running." (October 6, 2026)
+- No message content on the owner's server. A compromised server can show
+  that a message arrived, but not what it says. (October 6, 2026)
+
+
 ## Sign-in and the Keychain
 
 - An explanation of why GChat uses the Keychain, so that people do not worry

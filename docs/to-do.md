@@ -5,41 +5,25 @@ developer. It is not a prioritized backlog. What GChat does today is in
 behavior.md.
 
 
-## Push delivery in place of polling
+## Push delivery: what is left
 
-GChat polls: the open conversation every 3 seconds, and the conversation list
-every 15 seconds (design.md). A notification can come up to 15 seconds after
-the message, or 30 seconds in the background.
+The design and the relay are done (design.md, api-contract.md,
+deployment-relay.md). Left:
 
-The Chat API cannot push to a client app. Google's push mechanism is the
-Workspace Events API. It delivers events to a Google Cloud Pub/Sub topic.
-GChat then keeps a connection to Pub/Sub open and pulls events from its own
-subscription.
-
-Gains: delivery within about a second, fewer requests, and edits and
-deletions from other devices arrive as events.
-
-Work:
-
-- Cloud setup for each organization: enable the Workspace Events API and
-  Pub/Sub, make a topic, let Google Chat publish to it, make a pull
-  subscription. Add the steps to google-cloud-setup.md.
-- More scopes: Pub/Sub, and the scopes that the Workspace Events API needs
-  for Chat messages. Each person must sign in again.
-- A Workspace Events subscription for each conversation, or one for all
-  conversations if the API allows it. Find out first, because it decides the
-  amount of bookkeeping.
-- Renewal of subscriptions before they expire, and new subscriptions when a
-  renewal fails.
-- A Pub/Sub client in GChatKit, with acknowledgements and reconnection.
-- One Pub/Sub subscription for each Mac. Two Macs on one subscription each
-  get only part of the events.
-- Polling as a fallback at a much longer interval.
-
-Not verified yet: the scopes, the lifetime and renewal rules of
-subscriptions, whether events carry the whole message, and the cost of
-Pub/Sub at this volume.
-
+- Cloud setup and the first deployment of the relay (deployment-relay.md).
+- In GChat: get an ID token at sign-in and at each refresh, make and renew
+  the Workspace Events subscription with includeResource false, keep the
+  stream to the relay open and reconnect, fetch on each notice, and slow
+  polling to about once a minute while the stream works.
+- A new scope for Workspace Events, if the Chat scopes are not enough. Not
+  verified yet.
+- Look at a real event without resource data, and make sure that it holds
+  only identifiers (design.md, security rule 1).
+- Whether a subscription to all spaces covers spaces that the person joins
+  later. Not verified yet. If not, GChat renews it when the conversation
+  list grows.
+- One relay serves one Cloud project. Serving a second organization needs a
+  second relay, or a relay that reads several Pub/Sub subscriptions.
 
 ## Images in the transcript: what is left
 

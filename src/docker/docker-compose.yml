@@ -1,0 +1,49 @@
+name: gchat
+
+# The relay that passes Google Workspace Events notices to running copies of
+# GChat (docs/design.md). Built on the server via `git pull` (no registry); runs
+# the same under docker/arm64 (dev) and podman/amd64 (prod). Caddy on the host
+# adds TLS and the gchat-relay.themullers.org vhost.
+services:
+  relay:
+    restart: ${RESTART_POLICY:-unless-stopped}
+    build:
+      # Repository root, so the image can record the running commit from .git.
+      context: ../..
+      dockerfile: src/docker/relay/Dockerfile
+    environment:
+      # OAuth client IDs whose ID tokens the relay accepts: one per
+      # organization's build of GChat. Empty is a startup error.
+      ALLOWED_CLIENT_IDS: ${ALLOWED_CLIENT_IDS:?set ALLOWED_CLIENT_IDS in .env}
+      # Workspace domains whose users the relay accepts. Empty is a startup error.
+      ALLOWED_DOMAINS: ${ALLOWED_DOMAINS:?set ALLOWED_DOMAINS in .env}
+      # projects/<project>/subscriptions/<name>. Empty runs the relay without
+      # reading Pub/Sub, for local testing of the HTTP side.
+      PUBSUB_SUBSCRIPTION: ${PUBSUB_SUBSCRIPTION:-}
+      # The service account key, mounted below. Its only role is Pub/Sub
+      # Subscriber on that one subscription (docs/deployment-relay.md).
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/relay-service-account.json
+    volumes:
+      - ../../volumes/secrets:/secrets:ro
+    ports:
+      # Host port 8086 -> gchat-relay.themullers.org (see the ports registry).
+      - "8086:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Run with: docker compose --profile tools run --rm tests
+  # Not a long-running service, so no restart policy. Needs no network or keys.
+  tests:
+    profiles: ["tools"]
+    build:
+      context: ../..
+      dockerfile: src/docker/relay/Dockerfile
+      args:
+        INSTALL_DEV: "1"
+    environment:
+      ALLOWED_CLIENT_IDS: test
+      ALLOWED_DOMAINS: test
+    command: ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
