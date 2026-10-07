@@ -10,7 +10,6 @@ behavior.md.
 The design and the relay are done (design.md, api-contract.md,
 deployment.md). Left:
 
-- Cloud setup and the first deployment of the relay (deployment.md).
 - In GChat: get an ID token at sign-in and at each refresh, make and renew
   the Workspace Events subscription with includeResource false, keep the
   stream to the relay open and reconnect, fetch on each notice, and slow

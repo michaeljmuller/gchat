@@ -73,7 +73,9 @@ progress; see "Push delivery" below.
 
 ## Push delivery
 
-Status, October 6, 2026: the relay is built, GChat does not use it yet.
+Status, October 7, 2026: the relay runs at gchat-relay.themullers.org, and
+a test message published by hand reached it through Pub/Sub with a valid
+signature. GChat does not use the relay yet.
 
 Google can announce new messages through the Workspace Events API. GChat
 makes one Workspace Events subscription for the person signed in, with the

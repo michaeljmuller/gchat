@@ -135,9 +135,16 @@ The values for the release manager:
 
 None of these values is a secret. The host holds no Google credentials.
 
-For Zia Consulting, the project ID is chat-510420, and steps 1 to 8 were done
-on October 7, 2026. The values are in src/docker/.env on the owner's Mac,
-which is not in git.
+For Zia Consulting, the project ID is chat-510420, and the setup was done on
+October 7, 2026, except the optional quota limit (to-do.md). The values are
+in src/docker/.env on the owner's Mac and on the host. That file is not in
+git.
+
+To test the path from Pub/Sub to the relay, publish a message by hand: open
+the topic, open Messages, click Publish message, and publish any text. The
+log of the relay then shows "POST /v1/pubsub/push" with 204. A 401 or 403
+means that the relay refused the token. This test passed on October 7,
+2026.
 
 One relay accepts pushes from one Pub/Sub subscription, so it serves the
 organization of one Cloud project. A second organization needs a second
