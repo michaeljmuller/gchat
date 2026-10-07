@@ -1,7 +1,7 @@
 name: gchat
 
-# The relay that passes Google Workspace Events notices to running copies of
-# GChat (docs/design.md). Built on the server via `git pull` (no registry); runs
+# The relay that receives Google Workspace Events notices from Pub/Sub push and
+# passes them to running copies of GChat (docs/design.md). Built on the server via `git pull` (no registry); runs
 # the same under docker/arm64 (dev) and podman/amd64 (prod). Caddy on the host
 # adds TLS and the gchat-relay.themullers.org vhost.
 services:
@@ -17,14 +17,14 @@ services:
       ALLOWED_CLIENT_IDS: ${ALLOWED_CLIENT_IDS:?set ALLOWED_CLIENT_IDS in .env}
       # Workspace domains whose users the relay accepts. Empty is a startup error.
       ALLOWED_DOMAINS: ${ALLOWED_DOMAINS:?set ALLOWED_DOMAINS in .env}
-      # projects/<project>/subscriptions/<name>. Empty runs the relay without
-      # reading Pub/Sub, for local testing of the HTTP side.
+      # Pub/Sub pushes events to /v1/pubsub/push with a token that Google signs
+      # as this service account, for this audience. No key is needed on the
+      # host. Empty turns the push endpoint off, for local testing.
+      PUSH_SERVICE_ACCOUNT: ${PUSH_SERVICE_ACCOUNT:-}
+      PUSH_AUDIENCE: ${PUSH_AUDIENCE:-}
+      # projects/<project>/subscriptions/<name>. Pushes from any other Pub/Sub
+      # subscription are refused.
       PUBSUB_SUBSCRIPTION: ${PUBSUB_SUBSCRIPTION:-}
-      # The service account key, mounted below. Its only role is Pub/Sub
-      # Subscriber on that one subscription (docs/deployment-relay.md).
-      GOOGLE_APPLICATION_CREDENTIALS: /secrets/relay-service-account.json
-    volumes:
-      - ../../volumes/secrets:/secrets:ro
     ports:
       # Host port 8086 -> gchat-relay.themullers.org (see the ports registry).
       - "8086:8000"

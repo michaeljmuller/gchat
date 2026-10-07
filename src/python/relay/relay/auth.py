@@ -1,8 +1,10 @@
-"""Checks the Google ID token that each client sends."""
+"""Checks the Google-signed tokens that GChat clients and Pub/Sub send."""
 
 from dataclasses import dataclass
 from typing import Protocol
 
+import cachecontrol
+import requests
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 
@@ -25,16 +27,24 @@ class Verifier(Protocol):
     def __call__(self, token: str) -> Identity: ...
 
 
-class GoogleVerifier:
-    """Checks the signature, issuer, expiry and audience of a Google ID token.
+class PushVerifier(Protocol):
+    def __call__(self, token: str) -> None: ...
 
-    Blocking: it can fetch Google's public keys. Call it from a worker thread.
-    """
+
+def _google_request() -> google_requests.Request:
+    # Google's public keys change rarely; caching them per their Cache-Control
+    # header avoids a fetch for every token.
+    return google_requests.Request(session=cachecontrol.CacheControl(requests.Session()))
+
+
+class GoogleVerifier:
+    """Checks a GChat client's ID token: signature, issuer, expiry, audience,
+    and Workspace domain. Blocking; call it from a worker thread."""
 
     def __init__(self, client_ids: frozenset[str], domains: frozenset[str]):
         self._client_ids = client_ids
         self._domains = domains
-        self._request = google_requests.Request()
+        self._request = _google_request()
 
     def __call__(self, token: str) -> Identity:
         try:
@@ -48,3 +58,21 @@ class GoogleVerifier:
         if domain not in self._domains:
             raise AuthError(403, "this Workspace domain is not accepted")
         return Identity(user=str(claims["sub"]), domain=domain, expires=float(claims["exp"]))
+
+
+class GooglePushVerifier:
+    """Checks the token that Pub/Sub puts on each push: signed by Google, for
+    this audience, for the expected service account. Blocking."""
+
+    def __init__(self, service_account: str, audience: str):
+        self._service_account = service_account
+        self._audience = audience
+        self._request = _google_request()
+
+    def __call__(self, token: str) -> None:
+        try:
+            claims = id_token.verify_oauth2_token(token, self._request, audience=self._audience)
+        except ValueError as error:
+            raise AuthError(401, f"invalid push token: {error}") from error
+        if claims.get("email") != self._service_account or not claims.get("email_verified"):
+            raise AuthError(403, "push token is for another service account")

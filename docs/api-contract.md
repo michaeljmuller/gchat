@@ -1,6 +1,7 @@
 # Relay API contract
 
-The interface between GChat and its relay, for developers of either side.
+The interfaces of the relay: the stream that GChat reads, and the endpoint
+that Pub/Sub pushes events to. For developers of GChat and of the relay.
 Why the relay exists, and its security rules, are in design.md. Deploying it
 is in deployment-relay.md.
 
@@ -86,3 +87,43 @@ relay drops the oldest and sends:
     data: {}
 
 The client then refreshes its conversation list.
+
+
+## POST /v1/pubsub/push
+
+For the Pub/Sub push subscription only. GChat does not call it.
+
+Request: the Pub/Sub push format, with the token that Pub/Sub adds when the
+subscription has authentication on:
+
+    POST /v1/pubsub/push
+    Authorization: Bearer <token signed by Google>
+    Content-Type: application/json
+
+    {"subscription": "projects/<project>/subscriptions/<name>",
+     "message": {"attributes": {"ce-source": "...", "ce-type": "...",
+                                "ce-subject": "...", "ce-time": "..."},
+                 "data": "<base64>", "messageId": "..."}}
+
+The relay accepts the request only if all of these are true:
+
+- The token has a valid Google signature, has not expired, and its audience
+  is the configured PUSH_AUDIENCE.
+- The email claim of the token is the configured PUSH_SERVICE_ACCOUNT, and
+  it is verified.
+- The subscription field is the configured PUBSUB_SUBSCRIPTION, if that is
+  set.
+
+Answers:
+
+    204   accepted. Pub/Sub treats the message as acknowledged. The relay
+          also answers 204 for events that no client listens to, and for
+          messages that are not Workspace events.
+    400   the body is not JSON
+    401   no token, or the token is not valid
+    403   the token is for another service account, or the push came from
+          another Pub/Sub subscription
+    503   PUSH_SERVICE_ACCOUNT is not set, so push is off
+
+Pub/Sub sends a refused message again later. A message that keeps failing
+goes away when the retention period of the subscription ends.

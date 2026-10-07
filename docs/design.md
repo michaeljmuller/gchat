@@ -79,12 +79,13 @@ Google can announce new messages through the Workspace Events API. GChat
 makes one Workspace Events subscription for the person signed in, with the
 target //chat.googleapis.com/spaces/-, which means all spaces of that person.
 Google publishes the events to a Pub/Sub topic in the organization's Cloud
-project. A relay on the owner's Hetzner host reads the topic and passes each
-event to the copy of GChat that made the subscription. GChat then fetches
+project. A push subscription on that topic sends each event to a relay on
+the owner's Hetzner host, as an HTTPS request. The relay passes the event to
+the copy of GChat that made the Workspace Events subscription. GChat then fetches
 the new messages from the Chat API with the person's own sign-in, as it does
 after a poll.
 
-    Google Chat --> Workspace Events --> Pub/Sub topic --> relay --> GChat
+    Google Chat --> Workspace Events --> Pub/Sub topic --push--> relay --> GChat
                                                                        |
     GChat <-- message text, with the person's own sign-in <-- Chat API +
 
@@ -95,8 +96,10 @@ The relay is in src/python/relay. Its interface is in api-contract.md.
 1. Events carry no content. GChat makes each subscription with
    includeResource set to false. Events then hold identifiers and times
    only: which conversation, which message, when.
-2. The relay can only read events. Its service account has the Pub/Sub
-   Subscriber role on one Pub/Sub subscription, and no other role.
+2. The relay only receives events. It has no Google credentials and no
+   Google permissions. It accepts a push only with a token that Google
+   signed for one service account and one audience, from one Pub/Sub
+   subscription.
 3. GChat sends the relay only a Google ID token. An ID token proves who the
    person is, expires within an hour, and cannot call Google APIs.
 
@@ -122,8 +125,8 @@ Each Mac makes its own Workspace Events subscription, so two Macs of one
 person each get every event. Debug builds and releases on one Mac share
 their saved state, so they share one subscription.
 
-The relay keeps no queue. It acknowledges each Pub/Sub message after it
-passes the event on. Events for a copy of GChat that is not connected are
+The relay keeps no queue. Its answer to each push acknowledges the Pub/Sub
+message. Events for a copy of GChat that is not connected are
 lost. GChat refreshes the conversation list when it connects, so it catches
 up, and it keeps a slow poll as a safety net.
 
@@ -136,8 +139,13 @@ up, and it keeps a slow poll as a safety net.
   isolation and no server, but a setup step for each new colleague, and the
   same broad Pub/Sub permission at sign-in.
 - The relay (chosen). Colleagues only sign in, and the permission screen
-  does not change. The cost is a service to build, secure and run, and a
-  service account key on the host.
+  does not change. The cost is a service to build, secure and run.
+- A relay that pulls from Pub/Sub. Rejected (October 6, 2026) for push: a
+  pulling relay needs a service account key on the host, which is a secret
+  to protect, and new organizations block key creation by default. With
+  push, Google sends the events and signs each request. The cost of push:
+  the relay must be reachable from Google, so a full test needs a deployed
+  relay, not one on a development Mac.
 - Faster polling, every 5 seconds. Considered as an interim step. The owner
   preferred push.
 

@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 
 import httpx
@@ -6,13 +7,15 @@ import httpx
 from relay.hub import Hub, Notice
 from relay.main import create_app
 
-from .conftest import FakeVerifier
+from .conftest import FakePushVerifier, FakeVerifier
 
 URL = "/v1/events?subscription=subscriptions/chat-spaces-abc"
 
 
-def make_client(config, hub=None):
-    app = create_app(verifier=FakeVerifier(), hub=hub or Hub(), config=config, keepalive_seconds=0.05)
+def make_client(config, hub=None, push_verifier=FakePushVerifier()):
+    app = create_app(
+        verifier=FakeVerifier(), push_verifier=push_verifier, hub=hub or Hub(), config=config,
+        keepalive_seconds=0.05)
     return app, httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://relay")
 
 
@@ -73,3 +76,74 @@ async def test_streams_notices_until_the_token_expires(config):
     # The client is gone, and the owner keeps the subscription.
     assert hub.listener_count() == 0
     assert not hub.claim("subscriptions/chat-spaces-abc", "mallory")
+
+
+def push_body(subscription="projects/p/subscriptions/gchat-relay", source="subscriptions/chat-spaces-abc"):
+    data = base64.b64encode(json.dumps({"message": {"name": "spaces/AAAA/messages/BBBB"}}).encode()).decode()
+    return {
+        "subscription": subscription,
+        "message": {
+            "attributes": {
+                "ce-source": f"//workspaceevents.googleapis.com/{source}",
+                "ce-type": "google.workspace.chat.message.v1.created",
+                "ce-subject": "//chat.googleapis.com/spaces/AAAA",
+                "ce-time": "2026-10-06T12:00:00Z",
+            },
+            "data": data,
+            "messageId": "1",
+        },
+    }
+
+
+PUSH = {"Authorization": "Bearer good-push"}
+
+
+async def test_push_delivers_to_listeners_of_the_subscription(config):
+    hub = Hub()
+    queue = hub.listen("subscriptions/chat-spaces-abc")
+    other = hub.listen("subscriptions/other")
+    _, client = make_client(config, hub)
+    async with client:
+        response = await client.post("/v1/pubsub/push", json=push_body(), headers=PUSH)
+    assert response.status_code == 204
+    notice = queue.get_nowait()
+    assert notice.resource == "spaces/AAAA/messages/BBBB"
+    assert notice.type == "google.workspace.chat.message.v1.created"
+    assert other.empty()
+
+
+async def test_push_acknowledges_events_nobody_listens_to(config):
+    _, client = make_client(config)
+    async with client:
+        unknown = await client.post("/v1/pubsub/push", json=push_body(), headers=PUSH)
+        not_workspace = await client.post(
+            "/v1/pubsub/push", headers=PUSH,
+            json={"subscription": "projects/p/subscriptions/gchat-relay", "message": {"data": None}})
+    assert unknown.status_code == 204
+    assert not_workspace.status_code == 204
+
+
+async def test_push_refuses_unsigned_or_foreign_requests(config):
+    hub = Hub()
+    queue = hub.listen("subscriptions/chat-spaces-abc")
+    _, client = make_client(config, hub)
+    async with client:
+        no_token = await client.post("/v1/pubsub/push", json=push_body())
+        bad_token = await client.post(
+            "/v1/pubsub/push", json=push_body(), headers={"Authorization": "Bearer forged"})
+        other_subscription = await client.post(
+            "/v1/pubsub/push", json=push_body(subscription="projects/x/subscriptions/y"), headers=PUSH)
+        not_json = await client.post("/v1/pubsub/push", content=b"nonsense", headers=PUSH)
+    assert no_token.status_code == 401
+    assert bad_token.status_code == 401
+    assert other_subscription.status_code == 403
+    assert not_json.status_code == 400
+    assert queue.empty()
+
+
+async def test_push_is_off_without_a_service_account(config):
+    app = create_app(verifier=FakeVerifier(), push_verifier=None, hub=Hub(), config=config.__class__(
+        **{**config.__dict__, "push_service_account": "", "push_audience": ""}))
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://relay") as off:
+        response = await off.post("/v1/pubsub/push", json=push_body(), headers=PUSH)
+    assert response.status_code == 503

@@ -23,7 +23,8 @@ deployment-relay.md). Left:
   later. Not verified yet. If not, GChat renews it when the conversation
   list grows.
 - One relay serves one Cloud project. Serving a second organization needs a
-  second relay, or a relay that reads several Pub/Sub subscriptions.
+  second relay, or a relay that accepts pushes from several Pub/Sub
+  subscriptions.
 
 ## Images in the transcript: what is left
 

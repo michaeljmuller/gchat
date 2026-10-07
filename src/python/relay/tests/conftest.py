@@ -24,7 +24,16 @@ def config() -> Config:
     return Config(
         client_ids=frozenset({"client.apps.googleusercontent.com"}),
         domains=frozenset({"example.com"}),
-        pubsub_subscription="",
-        credentials_file="",
+        push_service_account="push@example.iam.gserviceaccount.com",
+        push_audience="https://relay.example.com/v1/pubsub/push",
+        pubsub_subscription="projects/p/subscriptions/gchat-relay",
         version="abc1234 2026-10-06",
     )
+
+
+class FakePushVerifier:
+    """Accepts only the token "good-push"."""
+
+    def __call__(self, token: str) -> None:
+        if token != "good-push":
+            raise AuthError(401, "invalid push token")

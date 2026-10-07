@@ -55,9 +55,11 @@ deployment-relay.md.
   client ID and the organization name. Copy Config/Local.xcconfig.example.
   The file is not in git.
 
-For push delivery: Pub/Sub, the Workspace Events API, a topic, a
-subscription and a service account key in the same Cloud project. The steps
-are in deployment-relay.md.
+For push delivery: a billing account linked to the Cloud project (Pub/Sub
+requires one, even inside its free tier), the Cloud Pub/Sub API, the Google
+Workspace Events API, a topic, a push subscription and a service account
+without keys, in the same Cloud project. The steps are in
+deployment-relay.md.
 
 Optional, for the list of everyone in the New Conversation sheet: the
 organization lets apps read its directory. See
