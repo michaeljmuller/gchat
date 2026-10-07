@@ -3,7 +3,7 @@
 The interfaces of the relay: the stream that GChat reads, and the endpoint
 that Pub/Sub pushes events to. For developers of GChat and of the relay.
 Why the relay exists, and its security rules, are in design.md. Deploying it
-is in deployment-relay.md.
+is in deployment.md.
 
 The relay serves plain HTTP. Caddy on the host adds TLS. The public address
 is https://gchat-relay.themullers.org.

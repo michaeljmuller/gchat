@@ -61,7 +61,7 @@ on the Mac, with nothing installed. Its tests:
     cd src/docker
     docker compose --profile tools run --rm --build tests
 
-Running it locally, and deploying it, are in deployment-relay.md.
+Running it locally, and deploying it, are in deployment.md.
 
 
 ## Development icon

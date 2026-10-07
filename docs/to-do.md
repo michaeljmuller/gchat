@@ -8,9 +8,9 @@ behavior.md.
 ## Push delivery: what is left
 
 The design and the relay are done (design.md, api-contract.md,
-deployment-relay.md). Left:
+deployment.md). Left:
 
-- Cloud setup and the first deployment of the relay (deployment-relay.md).
+- Cloud setup and the first deployment of the relay (deployment.md).
 - In GChat: get an ID token at sign-in and at each refresh, make and renew
   the Workspace Events subscription with includeResource false, keep the
   stream to the relay open and reconnect, fetch on each notice, and slow
@@ -41,7 +41,7 @@ polling. Steps:
 
 1. Click "Activate full account" in Billing. After that, charges go to the
    owner's card.
-2. Set the quota limit (deployment-relay.md, step 4): select all rows of
+2. Set the quota limit (deployment.md, step 4): select all rows of
    "Regional publisher throughput, kB per minute per region" in APIs &
    Services > Cloud Pub/Sub API > Quotas & System Limits, and set them to
    1000. Google does not allow quota changes during the free trial.

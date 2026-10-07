@@ -1,9 +1,14 @@
-# Deployment of the relay
+# Deployment
 
-Setting up the relay that receives Workspace Events notices and passes them
-to GChat. For the owner of the organization's Google Cloud project, and for
-the release manager of the Hetzner host. Why the relay exists is in design.md. Its interface is
-in api-contract.md.
+This document covers the deployment of the relay, the one component of
+GChat that runs on a server. The relay receives Workspace Events notices
+from Google and passes them to GChat. The document is for the owner of the
+organization's Google Cloud project, and for the release manager of the
+Hetzner host.
+
+The Mac app is not deployed. It is released as a disk image, which is in
+release.md. Why the relay exists is in design.md. Its interface is in
+api-contract.md.
 
 This is a procedure for people, not a script. Deployment, Caddy, DNS, server
 secrets and backups belong to the release manager. The repository supplies
