@@ -30,8 +30,9 @@ macOS warns people who open a disk image that was not notarized.
 ## What the script does
 
 1. Archives the Release configuration for Apple silicon and Intel. The
-   version in the About window is the commit ID. The build number is the
-   number of commits. The build date is today.
+   build records the commit ID, the number of commits and the time of the
+   commit for the About window. The number of commits is also the version
+   that macOS shows.
 2. Exports the app, signed with the Developer ID Application certificate,
    with a secure timestamp and the hardened runtime.
 3. Makes a disk image with the app and a link to /Applications, and signs it.

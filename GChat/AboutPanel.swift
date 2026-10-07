@@ -1,18 +1,38 @@
 import AppKit
 
 /// The standard About window, showing what the app is, the commit it was built
-/// from, the build number, the build date and a link to the source code.
+/// from and a link to the source code.
 enum AboutPanel {
     static let tagline = "A vibe-coded native Mac application for Google Chat."
 
-    @MainActor
-    static func show() {
-        let info = Bundle.main.infoDictionary ?? [:]
-        func value(_ key: String) -> String? {
-            guard let value = info[key] as? String, !value.isEmpty, !value.hasPrefix("$(") else { return nil }
-            return value
+    /// Written into the app by the "Record commit" build phase.
+    private struct BuildInfo {
+        var commit: String
+        var commitCount: String
+        var commitDate: Date?
+
+        static func load() -> BuildInfo? {
+            guard let url = Bundle.main.url(forResource: "BuildInfo", withExtension: "plist"),
+                  let values = NSDictionary(contentsOf: url) as? [String: String],
+                  let commit = values["commit"], commit != "unknown"
+            else { return nil }
+            return BuildInfo(
+                commit: commit,
+                commitCount: values["commitCount"] ?? "",
+                commitDate: values["commitDate"].flatMap { ISO8601DateFormatter().date(from: $0) })
         }
 
+        /// For example "commit 112 at Oct 7, 2026 12:04 PM".
+        var detail: String {
+            guard let commitDate else { return "commit \(commitCount)" }
+            let day = commitDate.formatted(.dateTime.month(.abbreviated).day().year())
+            let time = commitDate.formatted(.dateTime.hour().minute())
+            return "commit \(commitCount) at \(day) \(time)"
+        }
+    }
+
+    @MainActor
+    static func show() {
         let style = NSMutableParagraphStyle()
         style.alignment = .center
         style.paragraphSpacing = 4
@@ -24,29 +44,21 @@ enum AboutPanel {
         var regular = small
         regular[.foregroundColor] = NSColor.labelColor
 
-        var lines = [NSAttributedString(string: tagline, attributes: regular)]
-        if let date = value("GChatBuildDate") {
-            lines.append(NSAttributedString(string: "Built \(date)", attributes: small))
-        }
-        if let source = value("GChatSourceURL"), let url = URL(string: source) {
+        let credits = NSMutableAttributedString(string: tagline, attributes: regular)
+        if let source = Bundle.main.object(forInfoDictionaryKey: "GChatSourceURL") as? String,
+           !source.isEmpty, let url = URL(string: source) {
             var link = small
             link[.link] = url
-            lines.append(NSAttributedString(string: "Source code", attributes: link))
-        }
-        let credits = NSMutableAttributedString()
-        for (index, line) in lines.enumerated() {
-            if index > 0 { credits.append(NSAttributedString(string: "\n", attributes: small)) }
-            credits.append(line)
+            credits.append(NSAttributedString(string: "\n", attributes: small))
+            credits.append(NSAttributedString(string: "Source code", attributes: link))
         }
 
-        // A release shows "Version <commit> (<build>)". A development build has
-        // no commit or build number of its own, so it shows "Version development"
-        // only: an empty build string leaves out the brackets.
-        let commit = value("GChatCommit")
-        let isRelease = commit != nil && commit != "development"
+        // Shown as "Version <commit> (commit <number> at <time>)". An empty
+        // second string leaves out the brackets.
+        let build = BuildInfo.load()
         NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationVersion: commit ?? "development",
-            .version: isRelease ? (value("CFBundleVersion") ?? "") : "",
+            .applicationVersion: build?.commit ?? "unknown",
+            .version: build?.detail ?? "",
             .credits: credits,
         ])
         NSApp.activate()

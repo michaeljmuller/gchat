@@ -182,11 +182,16 @@ Account:
 
 GChat > About GChat shows:
 
-- "Version" with the commit ID and, in brackets, the build number. A
-  development build shows "Version development" with no build number.
+- The version line, for example "Version 8651591 (commit 112 at Oct 7, 2026
+  12:04 PM)". 8651591 is the ID of the commit that the app was built from.
+  112 is the number of commits up to it. The time is the time of that
+  commit, in the time zone of the Mac.
+- "-modified" after the commit ID, if the app was built from changes that
+  were not committed.
 - The line "A vibe-coded native Mac application for Google Chat."
-- The build date, for a release.
 - A link to the source code.
+
+Development builds and releases show the same lines.
 
 
 ## Messages sent from GChat

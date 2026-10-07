@@ -14,11 +14,6 @@ GCHAT_ORGANIZATION =
 GCHAT_RELAY_URL =
 GCHAT_EVENTS_TOPIC =
 
-// Shown in the About window. scripts/release.sh sets the commit and date for
-// releases; other builds say "development".
-GCHAT_COMMIT = development
-GCHAT_BUILD_DATE =
-
 // Link to the source code, shown in the About window when set. In xcconfig
 // files "//" starts a comment, so write the URL as https:/$()/github.com/...
 GCHAT_SOURCE_URL = https:/$()/github.com/michaeljmuller/gchat

@@ -413,11 +413,18 @@ the difference. Debug builds must not go to other people.
 
 ## Versions
 
-- The About window shows the commit ID as the version.
+- Every build records the commit that it was built from: the short ID, the
+  number of commits, and the time of the commit. A build phase in the Xcode
+  project, "Record commit", reads them from git and writes BuildInfo.plist
+  into the app. The About window reads that file. The phase needs git, so
+  the script sandbox of Xcode is off for the app target.
+- A first version passed the commit from scripts/release.sh as a build
+  setting. Development builds then had no commit, and showed "Version
+  development (1)".
 - The version fields that macOS reads (CFBundleShortVersionString and
-  CFBundleVersion) hold the build number, which is the number of commits.
-  macOS uses these fields to decide which of two copies is newer. Commit IDs
-  do not sort, so they are not in these fields.
+  CFBundleVersion) hold the number of commits, set by scripts/release.sh.
+  macOS uses these fields to decide which of two copies is newer. Commit
+  IDs do not sort, so they are not in these fields.
 - Debug builds have a separate icon with an orange hammer badge. The badge
   stays inside the rounded square of the icon. If part of an icon is outside
   that shape, macOS shows the whole icon small, on a gray plate.

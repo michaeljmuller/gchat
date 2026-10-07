@@ -72,6 +72,7 @@
 				C0A000000000000000000007 /* Sources */,
 				C0A000000000000000000003 /* Frameworks */,
 				C0A000000000000000000008 /* Resources */,
+				C0A000000000000000000050 /* Record commit */,
 			);
 			buildRules = (
 			);
@@ -135,6 +136,29 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		C0A000000000000000000050 /* Record commit */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Record commit";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/BuildInfo.plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Records which commit the app was built from, for the About window.\ncd \"$SRCROOT\"\ncommit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)\nif [ -n \"$(git status --porcelain 2>/dev/null)\" ]; then commit=\"$commit-modified\"; fi\ncount=$(git rev-list --count HEAD 2>/dev/null || echo 0)\nwhen=$(git log -1 --format=%cI 2>/dev/null || echo \"\")\nout=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/BuildInfo.plist\"\nmkdir -p \"$(dirname \"$out\")\"\nrm -f \"$out\"\nplutil -create xml1 \"$out\"\nplutil -insert commit -string \"$commit\" \"$out\"\nplutil -insert commitCount -string \"$count\" \"$out\"\nplutil -insert commitDate -string \"$when\" \"$out\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		C0A000000000000000000007 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -196,6 +220,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84URFQ3GPW;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = GChat;
@@ -224,6 +249,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84URFQ3GPW;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = GChat;

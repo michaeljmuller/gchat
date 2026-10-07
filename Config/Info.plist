@@ -10,10 +10,6 @@
 	<string>$(GCHAT_RELAY_URL)</string>
 	<key>GChatEventsTopic</key>
 	<string>$(GCHAT_EVENTS_TOPIC)</string>
-	<key>GChatCommit</key>
-	<string>$(GCHAT_COMMIT)</string>
-	<key>GChatBuildDate</key>
-	<string>$(GCHAT_BUILD_DATE)</string>
 	<key>GChatSourceURL</key>
 	<string>$(GCHAT_SOURCE_URL)</string>
 </dict>

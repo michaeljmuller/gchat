@@ -3,10 +3,11 @@
 #
 #   scripts/release.sh [--no-notarize]
 #
-# The version shown in the About window is the commit ID, with "-modified"
-# added when there are uncommitted changes. The build number is the number of
-# commits; macOS uses it to tell which copy is newer, so it is also the
-# version macOS and Finder show.
+# The About window shows the commit ID, with "-modified" added when there are
+# uncommitted changes, the number of commits and the time of the commit. The
+# Xcode build records these itself (the "Record commit" build phase). The
+# number of commits is also the version that macOS and Finder show, because
+# macOS uses it to tell which copy is newer.
 #
 # Needs: the Developer ID Application certificate in the login keychain, and
 # notarization credentials stored with
@@ -27,7 +28,6 @@ out=build/release
 profile=${NOTARY_PROFILE:-gchat-notary}
 build_number=$(git rev-list --count HEAD)
 version=$(git rev-parse --short HEAD)
-build_date=$(date +%Y-%m-%d)
 
 if [ -n "$(git status --porcelain)" ]; then
     echo "warning: uncommitted changes; the release will not match any commit" >&2
@@ -47,7 +47,6 @@ xcodebuild -project GChat.xcodeproj -scheme GChat -configuration Release \
     -destination "generic/platform=macOS" \
     -derivedDataPath build/release-derived -archivePath "$out/GChat.xcarchive" \
     MARKETING_VERSION="$build_number" CURRENT_PROJECT_VERSION="$build_number" \
-    GCHAT_COMMIT="$version" GCHAT_BUILD_DATE="$build_date" \
     -quiet archive
 
 echo "Signing with Developer ID"

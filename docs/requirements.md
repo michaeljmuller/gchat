@@ -149,7 +149,8 @@ All in the Settings window (October 2, 2026, unless stated):
   number, the build date and a link to the source on GitHub. (October 2,
   2026)
 - The About window says "a vibe-coded native Mac application for Google
-  Chat", and shows no "(1)" for a development build. (October 7, 2026)
+  Chat", and shows no "(1)" for a development build. Its version line has
+  the form "(commit 112 at Oct 7, 2026 12:04 PM)". (October 7, 2026)
 - A development workflow: use the released app every day, use the
   development build only to review a change, and switch between them with no
   friction. (October 3, 2026)
