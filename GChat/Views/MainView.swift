@@ -129,22 +129,29 @@ struct SidebarView: View {
             } else if store.isPushDown {
                 // Redrawn each second for the countdown to the next check.
                 TimelineView(.periodic(from: .now, by: 1)) { context in
-                    statusLine(relayDownMessage(at: context.date))
+                    statusLine(relayDownMessage(at: context.date), showsCheckNow: true)
                 }
             }
         }
     }
 
-    private func statusLine(_ text: String) -> some View {
-        Label(text, systemImage: "wifi.exclamationmark")
-            .font(.caption)
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-            .lineLimit(3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .background(.bar)
-            .help(text)
+    private func statusLine(_ text: String, showsCheckNow: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(text, systemImage: "wifi.exclamationmark")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .lineLimit(4)
+                .help(text)
+            if showsCheckNow {
+                Button("Check Now") { Task { await store.checkNow() } }
+                    .buttonStyle(.link)
+                    .padding(.leading, 22)
+            }
+        }
+        .font(.caption)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.bar)
     }
 
     /// Shown while the relay is out of reach and the app polls instead. With a
@@ -156,7 +163,13 @@ struct SidebarView: View {
         }
         let remaining = Int((store.nextPollAt?.timeIntervalSince(now) ?? 0).rounded(.up))
         if remaining <= 0 { return prefix + "checking for new messages now." }
-        return prefix + "next check for new messages in \(remaining) \(remaining == 1 ? "second" : "seconds")."
+        return prefix + "next check for new messages in \(Self.countdown(remaining))."
+    }
+
+    /// "45 seconds", or "7:05" from one minute up.
+    private static func countdown(_ seconds: Int) -> String {
+        if seconds < 60 { return "\(seconds) \(seconds == 1 ? "second" : "seconds")" }
+        return "\(seconds / 60):" + String(format: "%02d", seconds % 60)
     }
 
     /// Applies the search field and the sidebar settings. The store's order is most recent first.

@@ -45,7 +45,9 @@ opens System Settings.
 - Command-K jumps to a conversation by name. Return sends a message.
   Shift-Return adds a line break.
 - New messages show within about a second. If the relay of GChat cannot be
-  reached, they can take up to 30 seconds.
+  reached, GChat says so at the bottom of the sidebar and checks for
+  messages at intervals. After a long time without messages, an interval
+  can be up to 10 minutes. The Check Now button checks at once.
 - Closing the window leaves GChat running, so notifications continue. A
   setting changes this.
 - GChat cannot reply inside a thread, add reactions, edit or delete

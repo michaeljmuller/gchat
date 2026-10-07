@@ -125,11 +125,12 @@ public final class ChatStore {
 
     /// While polling, the wait before the next check starts at 2 seconds after
     /// a message was sent or received, and grows by a tenth after each check
-    /// that finds nothing, up to 30 seconds. It takes about 5 minutes without
-    /// a message to get there. Whether the app is in front does not matter:
-    /// the person can be switching between GChat and other work.
+    /// that finds nothing, up to 10 minutes. Without a message, the wait is
+    /// 30 seconds after about 5 minutes, 1 minute after about 10 minutes, and
+    /// 10 minutes after about 100 minutes. Whether the app is in front does
+    /// not matter: the person can be switching between GChat and other work.
     static let shortestWait: TimeInterval = 2
-    static let longestWait: TimeInterval = 30
+    static let longestWait: TimeInterval = 600
 
     static func nextWait(after wait: TimeInterval) -> TimeInterval {
         min(max(wait, shortestWait) * 1.1, longestWait)
@@ -313,6 +314,14 @@ public final class ChatStore {
             }
             nextPollAt = Date().addingTimeInterval(phase == .ready ? pollWait : Self.shortestWait)
         }
+    }
+
+    /// Checks for new messages now, and starts the waits again from the
+    /// shortest. For the Check Now button.
+    public func checkNow() async {
+        noteActivity()
+        await catchUp()
+        nextPollAt = Date().addingTimeInterval(pollWait)
     }
 
     /// A message was sent or received: check often again.

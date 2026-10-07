@@ -119,6 +119,8 @@ All in the Settings window (October 2, 2026, unless stated):
   backs off exponentially. (October 7, 2026)
 - The sidebar line for a relay that is down shows, live, when the next
   check happens. (October 7, 2026)
+- The polling wait can grow to 10 minutes, with a "check now" button.
+  (October 7, 2026)
 - The same rate in the background as in front: "might be actively working
   on something with a colleague and swapping back and forth." (October 7,
   2026)

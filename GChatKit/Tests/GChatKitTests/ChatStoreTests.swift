@@ -248,18 +248,36 @@ import Testing
 
     @Test func pollingWaitGrowsSlowlyToItsLimit() {
         #expect(ChatStore.nextWait(after: 2) == 2.2)
-        #expect(ChatStore.nextWait(after: 29) == 30)
-        #expect(ChatStore.nextWait(after: 30) == 30)
+        #expect(ChatStore.nextWait(after: 590) == 600)
+        #expect(ChatStore.nextWait(after: 600) == 600)
         #expect(ChatStore.nextWait(after: 0) == 2.2)
 
-        // From 2 seconds, about 5 minutes of checks that find nothing reach 30.
-        var wait = 2.0
-        var elapsed = 0.0
-        while wait < 30 {
-            elapsed += wait
-            wait = ChatStore.nextWait(after: wait)
+        // Minutes of checks that find nothing before the wait reaches a value.
+        func minutes(toReach target: Double) -> Double {
+            var wait = 2.0
+            var elapsed = 0.0
+            while wait < target {
+                elapsed += wait
+                wait = ChatStore.nextWait(after: wait)
+            }
+            return elapsed / 60
         }
-        #expect((240...360).contains(elapsed))
+        #expect((4...6).contains(minutes(toReach: 30)))
+        #expect((8...12).contains(minutes(toReach: 60)))
+        #expect((90...110).contains(minutes(toReach: 600)))
+    }
+
+    @Test func checkNowChecksAndStartsTheWaitsAgain() async throws {
+        let store = await makeStore()
+        var activity = 0
+        store.onActivity = { activity += 1 }
+        let calls = chat.update { $0.listCalls }
+        await store.checkNow()
+        #expect(chat.update { $0.listCalls } == calls + 1)
+        #expect(store.pollWait == 2)
+        #expect(activity == 1)
+        let next = try #require(store.nextPollAt)
+        #expect(next.timeIntervalSinceNow <= 2.1)
     }
 
     @Test func sendingAndReceivingCountAsActivity() async throws {

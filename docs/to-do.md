@@ -251,7 +251,8 @@ once a minute. One polling copy of GChat uses about:
 
 - During a conversation: 30 space reads a minute, and one message read for
   each conversation that changed.
-- After 5 minutes without a message: 2 space reads a minute.
+- After 5 minutes without a message: 2 space reads a minute, and fewer as
+  the wait grows to 10 minutes.
 - At the first launch: one membership read for each direct message and group
   chat, about 200 for an account with 200 conversations, at about 10 a
   second.

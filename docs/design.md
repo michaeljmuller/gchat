@@ -61,19 +61,30 @@ received in any conversation:
 
 - After activity, the wait is 2 seconds.
 - After each check that finds nothing, the wait grows by a tenth.
-- The longest wait is 30 seconds. About 5 minutes without a message get
-  there.
+- The longest wait is 10 minutes. Without a message, the wait is 30 seconds
+  after about 5 minutes, 1 minute after about 10 minutes, and 10 minutes
+  after about 100 minutes.
+- Check Now in the sidebar line, and Refresh (Command-R), check at once and
+  start the waits again from 2 seconds.
 - No polling while the Mac is offline.
 
 The wait does not depend on whether GChat is in front. The person can be
 working with a colleague and switching between GChat and other apps.
 
 The limits: 2 seconds is the shortest wait, because all copies of GChat
-share the quota of one Cloud project (to-do.md, "Quota"). The longest wait
-is 30 seconds, because it decides how late the first message after a quiet
-time shows. The growth is a tenth and not a doubling, because a pause in a
-conversation is not a failure. With doubling, the wait is at 30 seconds
-within a minute, while the person is still typing a reply.
+share the quota of one Cloud project (to-do.md, "Quota"). The growth is a
+tenth and not a doubling, because a pause in a conversation is not a
+failure. With doubling, the wait is at 30 seconds within a minute, while
+the person is still typing a reply.
+
+The longest wait decides how late the first message after a quiet time
+shows: up to 10 minutes. The owner chose 10 minutes on October 7, 2026, with
+Check Now as the way to look sooner. A first version stopped at 30 seconds.
+For a sign-in with push delivery, the long wait matters only while the
+relay is down. A sign-in without a relay always polls, so there the first
+message after a quiet hour or two can be up to 10 minutes late, and the
+sidebar shows no line and no Check Now button. Refresh (Command-R) does the
+same there.
 
 Earlier versions and why they changed (October 7, 2026):
 
