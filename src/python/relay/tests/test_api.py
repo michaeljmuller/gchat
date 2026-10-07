@@ -147,3 +147,17 @@ async def test_push_is_off_without_a_service_account(config):
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://relay") as off:
         response = await off.post("/v1/pubsub/push", json=push_body(), headers=PUSH)
     assert response.status_code == 503
+
+
+async def test_refused_requests_are_logged_with_their_user_agent(config, caplog):
+    caplog.set_level("INFO", logger="relay")
+    _, client = make_client(config)
+    async with client:
+        await client.get("/", headers={"User-Agent": "SomeScanner/1.0", "X-Forwarded-For": "203.0.113.9"})
+        await client.get("/healthz", headers={"User-Agent": "curl/8"})
+        await client.post("/v1/pubsub/push", json=push_body(), headers={"User-Agent": "Forger"})
+    messages = [record.getMessage() for record in caplog.records]
+    assert any(
+        "refused GET / -> 404" in m and "SomeScanner/1.0" in m and "203.0.113.9" in m for m in messages)
+    assert any("refused POST /v1/pubsub/push -> 401" in m and "Forger" in m for m in messages)
+    assert not any("/healthz" in m for m in messages)

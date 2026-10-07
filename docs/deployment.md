@@ -187,6 +187,22 @@ subdomain, host port and push subscription, and its own copy of the
 repository. Claim the port in the ports registry first.
 
 
+## Reading the log
+
+    podman compose logs --tail 50 relay
+
+- Lines with 127.0.0.1 and /healthz are the health check of the container.
+- All requests from outside show the address of Caddy, not of the sender.
+- For each request that it refuses or does not know (401, 403, 404, 405),
+  the relay adds a line "refused ..." with the User-Agent and the
+  X-Forwarded-For header. These show whether the request came from Google, a
+  browser or a scanner.
+- For each event, the relay logs its type, the Workspace Events subscription
+  and the number of clients that got it. The subscription names work like
+  keys (design.md), so only the release manager must be able to read the
+  log.
+
+
 ## Updates
 
 Pull the repository, then run the command from step 3 again. Copies of GChat

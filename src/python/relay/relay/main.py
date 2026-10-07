@@ -40,6 +40,23 @@ def create_app(
     app = FastAPI(title="gchat-relay", docs_url=None, redoc_url=None)
     app.state.hub = hub
 
+    @app.middleware("http")
+    async def log_refused(request: Request, call_next):
+        """Logs who sent each request that the relay refused or did not know.
+
+        The access log has only the path and the status. The User-Agent and
+        the forwarded address show whether a stray request came from Google,
+        a browser or a scanner.
+        """
+        response = await call_next(request)
+        if response.status_code in (401, 403, 404, 405):
+            log.info(
+                "refused %s %s -> %d, user-agent %r, forwarded-for %r",
+                request.method, request.url.path, response.status_code,
+                request.headers.get("user-agent", ""),
+                request.headers.get("x-forwarded-for", ""))
+        return response
+
     @app.get("/healthz")
     async def healthz() -> dict:
         return {"status": "ok", "version": config.version}
