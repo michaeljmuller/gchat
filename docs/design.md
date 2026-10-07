@@ -291,8 +291,8 @@ person is at the end, a new message, or an image that finishes loading,
 scrolls the end back into view. If the person scrolled up, the
 transcript stays in place and shows a "New messages" button, because a jump
 interrupts reading. Mac chat apps commonly do the same. The owner asked
-for the scroll. The button is the developer's choice for the scrolled-up
-case (October 7, 2026).
+for the scroll, and for a "mac-assed" app. The behavior in the scrolled-up
+case follows from the second request (requirements.md).
 
 The space between the last message and the composer is a 12 point marker at
 the end of the content, and scrolls go to that marker. When that space was

@@ -92,6 +92,12 @@ All in the Settings window (October 2, 2026, unless stated):
   2026)
 - The scroll goes all the way down. The newest message does not sit against
   the input field. (October 7, 2026)
+- The owner asked for a "mac-assed" app (see "The app"). The scroll follows
+  from that request in one case that the owner did not describe: when the
+  person scrolled up to read older messages, a new message does not move
+  the view. A "New messages" button shows, and a click on it scrolls to the
+  end. Mac chat apps commonly behave this way. The owner confirmed this
+  reading on October 7, 2026.
 - A click on an image must not open a browser page that fails. (October 2,
   2026)
 - Images shown in the conversation. (October 2, 2026)
