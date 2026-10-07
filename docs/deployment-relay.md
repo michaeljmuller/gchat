@@ -24,18 +24,46 @@ the container and states what it needs.
 
 The owner of the Cloud project does these steps in the Google Cloud console,
 in the project that holds the GChat OAuth client. The relay must be running
-at its public address before step 7, because Pub/Sub starts pushing at once.
+at its public address before step 9, because Pub/Sub starts pushing at once.
 
-1. Make sure that the project has a billing account. Pub/Sub needs one, even
-   when the use stays inside the free tier. In Billing > Budgets & alerts, a
-   budget of about 5 US dollars a month sends an email if something goes
-   wrong.
-2. Go to APIs & Services > Library. Enable "Cloud Pub/Sub API" and "Google
+1. Link a billing account to the project. Pub/Sub needs one, even when the
+   use stays inside the free tier (about 10 GiB of messages a month). The
+   expected use for about 30 people is under 1 GiB a month.
+   - Open the menu at the top left and click Billing. With the project
+     selected, the page shows the linked billing account.
+   - If the project has no billing account, click Link a billing account,
+     select or create one, and click Set account.
+   - Make sure that the link is in place: go to Billing > Account
+     management of the billing account, and find the project in the list
+     "Projects linked to this billing account".
+
+   The owner of the billing account pays any charges. For Zia Consulting,
+   the owner of the project linked a personal billing account in October
+   2026, so that the company carries no cost or risk.
+
+2. Make a budget alert. A budget sends email, but it does not stop
+   spending.
+   - In Billing, click Budgets & alerts, then Create budget.
+   - Name: GChat. Scope: this project only, all services. Click Next.
+   - Budget type: Specified amount. Target amount: 5 US dollars. Click
+     Next.
+   - Keep the thresholds 50%, 90% and 100% of actual spend, and keep the
+     email to billing admins and users. Click Finish.
+
+3. Go to APIs & Services > Library. Enable "Cloud Pub/Sub API" and "Google
    Workspace Events API". Do not use Pub/Sub Lite, which is a different
    product that Google is retiring.
-3. Go to Pub/Sub > Topics and click Create topic. For Topic ID, type
+4. Optional: set a hard limit with a quota. A lower quota makes Pub/Sub
+   refuse traffic above a rate, so a fault cannot cause a large bill. Go to
+   APIs & Services > Cloud Pub/Sub API > Quotas & System Limits, find the
+   publisher throughput quota for the project, and lower it. A rate of
+   about 1 MB a minute is far above the expected use. If the limit is too
+   low, Pub/Sub refuses events, and GChat gets messages later, through its
+   refresh. Not verified yet: the exact name and unit of the quota in the
+   console.
+5. Go to Pub/Sub > Topics and click Create topic. For Topic ID, type
    gchat-events. Clear "Add a default subscription". Click Create.
-4. Open the topic, open its Permissions, and click Add principal. For the
+6. Open the topic, open its Permissions, and click Add principal. For the
    principal, type chat-api-push@system.gserviceaccount.com. For the role,
    select Pub/Sub Publisher. Click Save. This lets Google Chat publish events
    to the topic.
@@ -50,19 +78,19 @@ at its public address before step 7, because Pub/Sub starts pushing at once.
    Google's documentation names it for Chat. If GChat later fails to make
    its Workspace Events subscription with the error INVALID_PUBSUB_TOPIC,
    this grant is the first thing to look at.
-5. Go to IAM & Admin > Service Accounts and click Create service account.
+7. Go to IAM & Admin > Service Accounts and click Create service account.
    For the name, type gchat-relay. Click Done without granting any role, and
    do not make a key. Pub/Sub signs its pushes as this account. The relay
    only checks the signature. The person who makes the push subscription in
-   step 7 needs the role Service Account User on this account. A project
+   step 9 needs the role Service Account User on this account. A project
    Owner has it already.
-6. Allow Pub/Sub to sign as the service account. Go to IAM & Admin > IAM,
+8. Allow Pub/Sub to sign as the service account. Go to IAM & Admin > IAM,
    and select "Include Google-provided role grants". Find the principal
    service-<project number>@gcp-sa-pubsub.iam.gserviceaccount.com. If it
    does not have the role Service Account Token Creator, open the gchat-relay
    service account, open Permissions, and grant that role to this
    principal. Not verified yet: whether new projects have the grant already.
-7. Go to Pub/Sub > Subscriptions and click Create subscription:
+9. Go to Pub/Sub > Subscriptions and click Create subscription:
    - Subscription ID: gchat-relay.
    - Topic: gchat-events.
    - Delivery type: Push.
@@ -77,7 +105,7 @@ at its public address before step 7, because Pub/Sub starts pushing at once.
 
 The values for the release manager:
 
-    PUSH_SERVICE_ACCOUNT  the email address of the service account from step 5
+    PUSH_SERVICE_ACCOUNT  the email address of the service account from step 7
     PUSH_AUDIENCE         https://gchat-relay.themullers.org/v1/pubsub/push
     PUBSUB_SUBSCRIPTION   projects/<project ID>/subscriptions/gchat-relay
     ALLOWED_CLIENT_IDS    the OAuth client ID of GChat in this project
@@ -128,7 +156,7 @@ repository. Claim the port in the ports registry first.
 
 ## Updates
 
-Pull the repository, then run the command from step 4 again. Copies of GChat
+Pull the repository, then run the command from step 3 again. Copies of GChat
 that are connected lose their stream and connect again. They catch up by
 refreshing, so no message is lost.
 
