@@ -39,10 +39,23 @@ at its public address before step 7, because Pub/Sub starts pushing at once.
    principal, type chat-api-push@system.gserviceaccount.com. For the role,
    select Pub/Sub Publisher. Click Save. This lets Google Chat publish events
    to the topic.
+
+   If the console refuses this principal, the organization policy
+   "Domain restricted sharing" (iam.allowedPolicyMemberDomains) is on. It
+   allows roles only for accounts of the organization, and this account
+   belongs to Google. An admin with the Organization Policy Administrator
+   role can allow it for this project.
+
+   Not verified yet: that this is the right principal for Workspace Events.
+   Google's documentation names it for Chat. If GChat later fails to make
+   its Workspace Events subscription with the error INVALID_PUBSUB_TOPIC,
+   this grant is the first thing to look at.
 5. Go to IAM & Admin > Service Accounts and click Create service account.
    For the name, type gchat-relay. Click Done without granting any role, and
    do not make a key. Pub/Sub signs its pushes as this account. The relay
-   only checks the signature.
+   only checks the signature. The person who makes the push subscription in
+   step 7 needs the role Service Account User on this account. A project
+   Owner has it already.
 6. Allow Pub/Sub to sign as the service account. Go to IAM & Admin > IAM,
    and select "Include Google-provided role grants". Find the principal
    service-<project number>@gcp-sa-pubsub.iam.gserviceaccount.com. If it
@@ -54,8 +67,10 @@ at its public address before step 7, because Pub/Sub starts pushing at once.
    - Topic: gchat-events.
    - Delivery type: Push.
    - Endpoint URL: https://gchat-relay.themullers.org/v1/pubsub/push
-   - Enable authentication: on. Service account: gchat-relay. Leave Audience
-     empty, so that it is the endpoint URL.
+   - Enable authentication: on. Service account: gchat-relay. Audience:
+     type the endpoint URL again,
+     https://gchat-relay.themullers.org/v1/pubsub/push. It must equal
+     PUSH_AUDIENCE on the relay.
    - Message retention duration: 1 day.
    - Retry policy: retry after exponential backoff delay.
    Click Create.
