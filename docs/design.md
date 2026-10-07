@@ -281,9 +281,14 @@ sandbox.
 
 ## Scrolling in the transcript
 
-The transcript follows new content only while its end is in view: within 40
-points of the bottom. A new message, or an image that finishes loading,
-then scrolls the end back into view. If the person scrolled up, the
+The transcript follows new content while the person is at its end. It
+counts as at the end until the person scrolls up: the view moves up, and
+the end is more than 40 points out of view. Growth of the content and the
+app's own scrolls do not count, because they also change the distance to
+the end. A first version measured only the distance, and showed the "New
+messages" button when a conversation opened with new messages. While the
+person is at the end, a new message, or an image that finishes loading,
+scrolls the end back into view. If the person scrolled up, the
 transcript stays in place and shows a "New messages" button, because a jump
 interrupts reading. Mac chat apps commonly do the same. The owner asked
 for the scroll. The button is the developer's choice for the scrolled-up

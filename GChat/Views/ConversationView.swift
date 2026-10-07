@@ -62,8 +62,10 @@ struct TranscriptView: View {
     let space: Space
     /// Loading older messages on scroll starts only after the first layout has settled.
     @State private var isArmed = false
-    /// Whether the end of the transcript is in view. New messages scroll into
-    /// view only then, so reading older messages is not interrupted.
+    /// Whether the person is following the end of the transcript. It stays
+    /// true while content grows or the app scrolls, and becomes false only
+    /// when the person scrolls up. New messages scroll into view only while
+    /// it is true, so reading older messages is not interrupted.
     @State private var isAtBottom = true
     /// A message arrived while the person was reading further up.
     @State private var hasNewBelow = false
@@ -77,6 +79,7 @@ struct TranscriptView: View {
     /// What the scroll view reports about its position.
     private struct ScrollState: Equatable {
         var contentHeight: CGFloat
+        var offset: CGFloat
         var distanceFromBottom: CGFloat
     }
 
@@ -107,18 +110,23 @@ struct TranscriptView: View {
             .onScrollGeometryChange(for: ScrollState.self) { geometry in
                 ScrollState(
                     contentHeight: geometry.contentSize.height,
+                    offset: geometry.contentOffset.y,
                     distanceFromBottom: geometry.contentSize.height + geometry.contentInsets.bottom
                         - geometry.contentOffset.y - geometry.containerSize.height)
             } action: { old, new in
-                // Content grew while the end was in view: a new message, or an
-                // image that finished loading. Keep the end in view.
-                if new.contentHeight > old.contentHeight, old.distanceFromBottom < Self.bottomTolerance,
-                   new.distanceFromBottom >= Self.bottomTolerance {
+                if new.distanceFromBottom < Self.bottomTolerance {
+                    // The end is in view, however it got there.
+                    isAtBottom = true
+                    hasNewBelow = false
+                } else if new.offset < old.offset - 0.5 {
+                    // The view moved up and the end is out of view: the person
+                    // scrolled up. The app itself only ever scrolls down here.
+                    isAtBottom = false
+                } else if new.contentHeight > old.contentHeight, isAtBottom {
+                    // Content grew below while the person was at the end: a new
+                    // message, or an image that finished loading. Follow it.
                     scrollToBottom(proxy)
-                    return
                 }
-                isAtBottom = new.distanceFromBottom < Self.bottomTolerance
-                if isAtBottom { hasNewBelow = false }
             }
             .onChange(of: transcript.pending.count) { old, new in
                 // The person sent a message: always show it.
