@@ -208,6 +208,14 @@ Work:
   Make sure that the last message stays visible when an image above it
   loads.
 
+A fault in the scroll that exists today (reported October 7, 2026): after
+the person sends a message, the transcript does not scroll all the way down.
+The space below the last message stays hidden, so the new message sits too
+close to the composer. The transcript has 12 points of padding at the bottom
+and a 1 point marker that the scroll goes to. The scroll must end at the
+bottom of the content, padding included. Use the same scroll for new
+messages from the server.
+
 
 ## Notifications
 
