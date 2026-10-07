@@ -124,24 +124,39 @@ struct SidebarView: View {
         .searchable(text: $search, placement: .sidebar, prompt: "Search")
         .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 400)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let error = store.connectionError ?? relayDownMessage {
-                Label(error, systemImage: "wifi.exclamationmark")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(10)
-                    .background(.bar)
-                    .help(error)
+            if let error = store.connectionError {
+                statusLine(error)
+            } else if store.isPushDown {
+                // Redrawn each second for the countdown to the next check.
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    statusLine(relayDownMessage(at: context.date))
+                }
             }
         }
     }
 
-    /// Shown while the relay is out of reach and the app polls instead.
-    private var relayDownMessage: String? {
-        guard store.isPushDown else { return nil }
-        return "New message notification server is down; polling for new messages every "
-            + "\(store.listPollSeconds) seconds."
+    private func statusLine(_ text: String) -> some View {
+        Label(text, systemImage: "wifi.exclamationmark")
+            .font(.caption)
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .lineLimit(3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(.bar)
+            .help(text)
+    }
+
+    /// Shown while the relay is out of reach and the app polls instead. With a
+    /// short wait a countdown only flickers, so the rate is shown then.
+    private func relayDownMessage(at now: Date) -> String {
+        let prefix = "New message notification server is down; "
+        if store.pollWait < 5 {
+            return prefix + "polling for new messages every \(Int(store.pollWait.rounded())) seconds."
+        }
+        let remaining = Int((store.nextPollAt?.timeIntervalSince(now) ?? 0).rounded(.up))
+        if remaining <= 0 { return prefix + "checking for new messages now." }
+        return prefix + "next check for new messages in \(remaining) \(remaining == 1 ? "second" : "seconds")."
     }
 
     /// Applies the search field and the sidebar settings. The store's order is most recent first.

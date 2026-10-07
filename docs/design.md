@@ -49,31 +49,43 @@ file. The owner chose the Keychain (October 2, 2026).
 ## Getting messages
 
 The Chat API cannot push messages to a client app. Without push delivery
-through the relay (below), GChat polls. The rate follows chat activity,
-which is a message sent or received in any conversation:
+through the relay (below), GChat polls.
 
-    Time since the last activity    Open conversation    All conversations
-    less than 2 minutes             every 2 seconds      every 10 seconds
-    2 to 10 minutes                 every 5 seconds      every 15 seconds
-    more than 10 minutes            every 15 seconds     every 30 seconds
+One check covers every conversation. GChat gets the conversation list, in
+which each conversation has the time of its last activity. One request
+therefore shows which conversations changed. GChat then gets the new
+messages of those conversations only, including the open one.
 
-- For the open conversation, GChat asks only for messages created after the
-  newest one it has.
-- For all conversations, GChat gets the conversation list. Each conversation
-  in the list has the time of its last activity, so one request shows which
-  conversations changed. GChat then gets the new messages of those
-  conversations only.
+The wait between checks follows chat activity, which is a message sent or
+received in any conversation:
+
+- After activity, the wait is 2 seconds.
+- After each check that finds nothing, the wait grows by a tenth.
+- The longest wait is 30 seconds. About 5 minutes without a message get
+  there.
 - No polling while the Mac is offline.
 
-The rate does not depend on whether GChat is in front. The person can be
-working with a colleague and switching between GChat and other apps. A
-first version polled more slowly in the background. The owner rejected
-that (October 7, 2026).
+The wait does not depend on whether GChat is in front. The person can be
+working with a colleague and switching between GChat and other apps.
 
-The limits: every 2 seconds is the fastest rate, because all copies of GChat
-share the quota of one Cloud project, and Google limits reads on one
-conversation (to-do.md, "Quota"). The slowest rate is every 30 seconds,
-because it decides how late the first message after a quiet time shows.
+The limits: 2 seconds is the shortest wait, because all copies of GChat
+share the quota of one Cloud project (to-do.md, "Quota"). The longest wait
+is 30 seconds, because it decides how late the first message after a quiet
+time shows. The growth is a tenth and not a doubling, because a pause in a
+conversation is not a failure. With doubling, the wait is at 30 seconds
+within a minute, while the person is still typing a reply.
+
+Earlier versions and why they changed (October 7, 2026):
+
+- A slower rate in the background. The owner rejected it.
+- Two checks at two rates: the open conversation, and the list. The list
+  check already covers the open conversation, so one check is simpler, and
+  every conversation updates at the same speed. The cost: each check
+  returns the whole list, about 60 KB for 200 conversations. Not verified
+  yet: how soon Google updates the time of the last activity. If it lags,
+  the direct check of the open conversation can come back.
+- Three fixed rates by time since the last activity. The growing wait
+  replaced them with one rule.
 
 Messages stay in memory. A launch loads the newest 50 messages of a
 conversation when it opens.

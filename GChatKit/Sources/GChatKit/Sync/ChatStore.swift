@@ -65,9 +65,11 @@ public final class ChatStore {
     /// back to polling at its normal rate. Set by PushController. Shown in the
     /// sidebar.
     public var isPushDown = false
-    /// How often the conversation list is polled at the moment, in seconds.
-    /// It follows chat activity. Shown in the sidebar when the relay is down.
-    public private(set) var listPollSeconds = 15
+    /// When the app will next check for new messages, while it polls. Nil
+    /// while push delivery works. Shown in the sidebar when the relay is down.
+    public private(set) var nextPollAt: Date?
+    /// The current wait between checks, in seconds, while the app polls.
+    public private(set) var pollWait: TimeInterval = 2
 
     /// Called when a message was sent or a new one arrived. PushController
     /// uses it to try the relay again early.
@@ -96,9 +98,8 @@ public final class ChatStore {
     @ObservationIgnored private var titleAttempts: Set<String> = []
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var lastSafetyPoll = Date.distantPast
-    /// When a message was last sent or received. Starts in the past, so a
-    /// launch with no activity polls at the normal rate.
-    @ObservationIgnored private var lastActivity = Date().addingTimeInterval(-120)
+    /// When a message was last sent or received.
+    @ObservationIgnored private var lastActivity = Date.distantPast
     /// Names of messages that were already added, notified or marked read.
     @ObservationIgnored private var handledMessages: Set<String> = []
     @ObservationIgnored private var reportedUnread = -1
@@ -122,16 +123,18 @@ public final class ChatStore {
 
     private static let safetyInterval: TimeInterval = 60
 
-    /// How often to poll, in seconds, for a given time since the last message
-    /// was sent or received. Whether the app is in front does not matter: the
-    /// person can be switching between GChat and other work.
-    static func pollIntervals(sinceActivity: TimeInterval) -> (open: TimeInterval, list: TimeInterval) {
-        switch sinceActivity {
-        case ..<120: (2, 10)     // a conversation is going on
-        case ..<600: (5, 15)
-        default: (15, 30)        // nothing for ten minutes
-        }
+    /// While polling, the wait before the next check starts at 2 seconds after
+    /// a message was sent or received, and grows by a tenth after each check
+    /// that finds nothing, up to 30 seconds. It takes about 5 minutes without
+    /// a message to get there. Whether the app is in front does not matter:
+    /// the person can be switching between GChat and other work.
+    static let shortestWait: TimeInterval = 2
+    static let longestWait: TimeInterval = 30
+
+    static func nextWait(after wait: TimeInterval) -> TimeInterval {
+        min(max(wait, shortestWait) * 1.1, longestWait)
     }
+
     private static let pageSize = 50
 
     public init(chat: any ChatService, people: any ProfileService, defaults: UserDefaults = .standard) {
@@ -285,42 +288,39 @@ public final class ChatStore {
 
     private func run() async {
         await refreshSpaces()
-        var lastOpenPoll = Date()
-        var lastListPoll = Date()
+        nextPollAt = Date().addingTimeInterval(pollWait)
         while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(1))
+            try? await Task.sleep(for: .milliseconds(500))
             if Task.isCancelled { break }
             guard isOnline, !isPaused else { continue }
-            if phase != .ready {
-                if Date().timeIntervalSince(lastListPoll) >= 3 {
-                    await refreshSpaces()
-                    lastListPoll = Date()
-                }
-                continue
-            }
-            if isPushConnected {
+            if isPushConnected, phase == .ready {
                 // Notices arrive through the relay. Poll now and then anyway,
                 // in case one was lost.
+                if nextPollAt != nil { nextPollAt = nil }
                 if Date().timeIntervalSince(lastSafetyPoll) >= Self.safetyInterval {
                     await catchUp()
                 }
                 continue
             }
-            let intervals = Self.pollIntervals(sinceActivity: Date().timeIntervalSince(lastActivity))
-            if listPollSeconds != Int(intervals.list) { listPollSeconds = Int(intervals.list) }
-            if Date().timeIntervalSince(lastOpenPoll) >= intervals.open {
-                await pollSelection()
-                lastOpenPoll = Date()
+            // One check covers every conversation: the list has the time of the
+            // last activity of each, and refreshSpaces fetches what changed.
+            guard Date() >= nextPollAt ?? .distantPast else { continue }
+            let activityBefore = lastActivity
+            await refreshSpaces()
+            if lastActivity == activityBefore {
+                // Nothing new: wait a little longer next time.
+                pollWait = Self.nextWait(after: pollWait)
             }
-            if Date().timeIntervalSince(lastListPoll) >= intervals.list {
-                await refreshSpaces()
-                lastListPoll = Date()
-            }
+            nextPollAt = Date().addingTimeInterval(phase == .ready ? pollWait : Self.shortestWait)
         }
     }
 
+    /// A message was sent or received: check often again.
     private func noteActivity() {
         lastActivity = Date()
+        pollWait = Self.shortestWait
+        let soon = Date().addingTimeInterval(Self.shortestWait)
+        if let next = nextPollAt, next > soon { nextPollAt = soon }
         onActivity?()
     }
 

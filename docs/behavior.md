@@ -38,9 +38,10 @@ requests behind each feature are in requirements.md.
   (configuration).
 - A line at the bottom of the sidebar shows connection problems.
 - When the relay is out of reach for 30 seconds or more, that line shows "New
-  message notification server is down; polling for new messages every X
-  seconds." X is the current rate for all conversations: 10, 15 or 30. The
-  line goes away when the relay answers again.
+  message notification server is down; next check for new messages in N
+  seconds." N counts down each second. While the wait between checks is
+  under 5 seconds, the line ends with "polling for new messages every N
+  seconds." instead. The line goes away when the relay answers again.
 - Opening a conversation from Command-K, a shortcut or a notification selects
   its tab.
 
@@ -114,11 +115,11 @@ requests behind each feature are in requirements.md.
   messages arrive within about a second, in every conversation.
 - Messages that someone edits or deletes change in an open conversation at
   once.
-- Without a relay, or when the relay cannot be reached, GChat polls. After
-  a message was sent or received, it polls the open conversation every 2
-  seconds and all conversations every 10 seconds. The rate falls in two
-  steps, to every 15 and every 30 seconds after 10 minutes without a
-  message. Edits and deletions then show at the next launch.
+- Without a relay, or when the relay cannot be reached, GChat polls. It
+  checks all conversations together. After a message was sent or received,
+  it checks every 2 seconds. Each check that finds nothing makes the wait a
+  tenth longer, up to 30 seconds, which takes about 5 minutes. Edits and
+  deletions then show at the next launch.
 - The polling rate is the same whether GChat is in front or not.
 
 

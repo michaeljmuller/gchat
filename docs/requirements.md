@@ -115,6 +115,10 @@ All in the Settings window (October 2, 2026, unless stated):
   (October 7, 2026)
 - While the app polls, the rate follows activity: fast during a
   conversation, slower after a while without messages. (October 7, 2026)
+- One check, not a separate one for the open conversation. A wait that
+  backs off exponentially. (October 7, 2026)
+- The sidebar line for a relay that is down shows, live, when the next
+  check happens. (October 7, 2026)
 - The same rate in the background as in front: "might be actively working
   on something with a colleague and swapping back and forth." (October 7,
   2026)

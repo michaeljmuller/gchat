@@ -246,13 +246,20 @@ import Testing
         #expect(store.space(named: "spaces/new") != nil)
     }
 
-    @Test func pollingFollowsChatActivity() {
-        #expect(ChatStore.pollIntervals(sinceActivity: 0) == (2, 10))
-        #expect(ChatStore.pollIntervals(sinceActivity: 119) == (2, 10))
-        #expect(ChatStore.pollIntervals(sinceActivity: 120) == (5, 15))
-        #expect(ChatStore.pollIntervals(sinceActivity: 599) == (5, 15))
-        #expect(ChatStore.pollIntervals(sinceActivity: 600) == (15, 30))
-        #expect(ChatStore.pollIntervals(sinceActivity: 86_400) == (15, 30))
+    @Test func pollingWaitGrowsSlowlyToItsLimit() {
+        #expect(ChatStore.nextWait(after: 2) == 2.2)
+        #expect(ChatStore.nextWait(after: 29) == 30)
+        #expect(ChatStore.nextWait(after: 30) == 30)
+        #expect(ChatStore.nextWait(after: 0) == 2.2)
+
+        // From 2 seconds, about 5 minutes of checks that find nothing reach 30.
+        var wait = 2.0
+        var elapsed = 0.0
+        while wait < 30 {
+            elapsed += wait
+            wait = ChatStore.nextWait(after: wait)
+        }
+        #expect((240...360).contains(elapsed))
     }
 
     @Test func sendingAndReceivingCountAsActivity() async throws {
@@ -265,6 +272,7 @@ import Testing
 
         await store.send("hi", to: "spaces/team")
         #expect(activity == 1)
+        #expect(store.pollWait == 2)
 
         let later = Date().addingTimeInterval(5)
         chat.update { state in
