@@ -86,8 +86,8 @@ only to review a change:
 1. The everyday copy is the latest release in /Applications, made from the
    same disk image that colleagues get.
 2. To review a change, quit GChat, then open the Debug build. Its icon has a
-   hammer badge. Its About window shows the commit, with "-modified" if the
-   build has changes that are not committed.
+   hammer badge. Its About window shows "Version development" and the time
+   of the build.
 3. When the change is ready, commit it and make a release (release.md).
    Install the new disk image over the copy in /Applications. Use it for a
    while before other people get it.

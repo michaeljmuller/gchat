@@ -418,9 +418,12 @@ the difference. Debug builds must not go to other people.
   project, "Record commit", reads them from git and writes BuildInfo.plist
   into the app. The About window reads that file. The phase needs git, so
   the script sandbox of Xcode is off for the app target.
+- The phase also records the build configuration and the time of the
+  build. A Debug build is usually made from code that is not committed, so
+  a commit ID on it misleads. The About window shows "development" and the
+  time of the build for it.
 - A first version passed the commit from scripts/release.sh as a build
-  setting. Development builds then had no commit, and showed "Version
-  development (1)".
+  setting. Development builds then showed "Version development (1)".
 - The version fields that macOS reads (CFBundleShortVersionString and
   CFBundleVersion) hold the number of commits, set by scripts/release.sh.
   macOS uses these fields to decide which of two copies is newer. Commit

@@ -155,7 +155,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Records which commit the app was built from, for the About window.\ncd \"$SRCROOT\"\ncommit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)\nif [ -n \"$(git status --porcelain 2>/dev/null)\" ]; then commit=\"$commit-modified\"; fi\ncount=$(git rev-list --count HEAD 2>/dev/null || echo 0)\nwhen=$(git log -1 --format=%cI 2>/dev/null || echo \"\")\nout=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/BuildInfo.plist\"\nmkdir -p \"$(dirname \"$out\")\"\nrm -f \"$out\"\nplutil -create xml1 \"$out\"\nplutil -insert commit -string \"$commit\" \"$out\"\nplutil -insert commitCount -string \"$count\" \"$out\"\nplutil -insert commitDate -string \"$when\" \"$out\"\n";
+			shellScript = "# Records which commit the app was built from, and when, for the About window.\ncd \"$SRCROOT\"\ncommit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)\nif [ -n \"$(git status --porcelain 2>/dev/null)\" ]; then commit=\"$commit-modified\"; fi\ncount=$(git rev-list --count HEAD 2>/dev/null || echo 0)\nwhen=$(git log -1 --format=%cI 2>/dev/null || echo \"\")\nout=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/BuildInfo.plist\"\nmkdir -p \"$(dirname \"$out\")\"\nrm -f \"$out\"\nplutil -create xml1 \"$out\"\nplutil -insert commit -string \"$commit\" \"$out\"\nplutil -insert commitCount -string \"$count\" \"$out\"\nplutil -insert commitDate -string \"$when\" \"$out\"\nplutil -insert configuration -string \"$CONFIGURATION\" \"$out\"\nplutil -insert buildDate -string \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" \"$out\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

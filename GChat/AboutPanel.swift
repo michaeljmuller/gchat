@@ -10,24 +10,42 @@ enum AboutPanel {
         var commit: String
         var commitCount: String
         var commitDate: Date?
+        var isDevelopment: Bool
+        var buildDate: Date?
 
         static func load() -> BuildInfo? {
             guard let url = Bundle.main.url(forResource: "BuildInfo", withExtension: "plist"),
-                  let values = NSDictionary(contentsOf: url) as? [String: String],
-                  let commit = values["commit"], commit != "unknown"
+                  let values = NSDictionary(contentsOf: url) as? [String: String]
             else { return nil }
+            let formatter = ISO8601DateFormatter()
             return BuildInfo(
-                commit: commit,
+                commit: values["commit"] ?? "unknown",
                 commitCount: values["commitCount"] ?? "",
-                commitDate: values["commitDate"].flatMap { ISO8601DateFormatter().date(from: $0) })
+                commitDate: values["commitDate"].flatMap(formatter.date(from:)),
+                isDevelopment: values["configuration"] == "Debug",
+                buildDate: values["buildDate"].flatMap(formatter.date(from:)))
         }
 
-        /// For example "commit 112 at Oct 7, 2026 12:04 PM".
+        /// The first part of the version line.
+        var version: String {
+            isDevelopment ? "development" : commit
+        }
+
+        /// The part in brackets. A release names its commit. A development
+        /// build is usually made from code that is not committed, so it gives
+        /// the time of the build instead.
         var detail: String {
-            guard let commitDate else { return "commit \(commitCount)" }
-            let day = commitDate.formatted(.dateTime.month(.abbreviated).day().year())
-            let time = commitDate.formatted(.dateTime.hour().minute())
-            return "commit \(commitCount) at \(day) \(time)"
+            if isDevelopment {
+                return buildDate.map { "built \(Self.format($0))" } ?? ""
+            }
+            return commitDate.map { "commit \(commitCount) at \(Self.format($0))" } ?? "commit \(commitCount)"
+        }
+
+        /// For example "Oct 7, 2026 12:04 PM".
+        private static func format(_ date: Date) -> String {
+            let day = date.formatted(.dateTime.month(.abbreviated).day().year())
+            let time = date.formatted(.dateTime.hour().minute())
+            return "\(day) \(time)"
         }
     }
 
@@ -53,11 +71,12 @@ enum AboutPanel {
             credits.append(NSAttributedString(string: "Source code", attributes: link))
         }
 
-        // Shown as "Version <commit> (commit <number> at <time>)". An empty
+        // A release shows "Version <commit> (commit <number> at <time>)", a
+        // development build "Version development (built <time>)". An empty
         // second string leaves out the brackets.
         let build = BuildInfo.load()
         NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationVersion: build?.commit ?? "unknown",
+            .applicationVersion: build?.version ?? "unknown",
             .version: build?.detail ?? "",
             .credits: credits,
         ])
