@@ -84,7 +84,9 @@ For a sign-in with push delivery, the long wait matters only while the
 relay is down. A sign-in without a relay always polls, so there the first
 message after a quiet hour or two can be up to 10 minutes late, and the
 sidebar shows no line and no Check Now button. Refresh (Command-R) does the
-same there.
+same there. The owner accepted this: the app is for the organization with
+the relay, and the sign-in without one was only a test during the first
+build.
 
 Earlier versions and why they changed (October 7, 2026):
 
