@@ -88,6 +88,11 @@ public struct Attachment: Codable, Hashable, Sendable {
 public struct Annotation: Codable, Hashable, Sendable {
     public struct UserMention: Codable, Hashable, Sendable {
         public var user: User?
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            user = container.lenient(User.self, forKey: .user)
+        }
     }
 
     public var type: String?
@@ -113,6 +118,21 @@ public struct Message: Codable, Identifiable, Hashable, Sendable {
     public var annotations: [Annotation]?
 
     public var id: String { name }
+
+    /// The API sometimes returns a sender without a resource name. Such a
+    /// sender is dropped, so that the message still loads.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        sender = container.lenient(User.self, forKey: .sender)
+        createTime = try container.decodeIfPresent(Date.self, forKey: .createTime)
+        text = try container.decodeIfPresent(String.self, forKey: .text)
+        formattedText = try container.decodeIfPresent(String.self, forKey: .formattedText)
+        thread = try container.decodeIfPresent(ThreadRef.self, forKey: .thread)
+        threadReply = try container.decodeIfPresent(Bool.self, forKey: .threadReply)
+        attachment = try container.decodeIfPresent([Attachment].self, forKey: .attachment)
+        annotations = try container.decodeIfPresent([Annotation].self, forKey: .annotations)
+    }
 
     public init(
         name: String, sender: User? = nil, createTime: Date? = nil, text: String? = nil,
@@ -144,6 +164,28 @@ public struct Message: Codable, Identifiable, Hashable, Sendable {
             names[user] = String(decoding: units[start..<start + length], as: UTF16.self)
         }
         return names
+    }
+}
+
+extension KeyedDecodingContainer {
+    /// A value that is nil when it is absent or cannot be decoded.
+    func lenient<T: Decodable>(_ type: T.Type, forKey key: Key) -> T? {
+        (try? decodeIfPresent(type, forKey: key)) ?? nil
+    }
+}
+
+/// An array element that is nil when it cannot be decoded, so that one bad
+/// element does not fail the whole array.
+struct Lossy<Value: Decodable>: Decodable {
+    var value: Value?
+    var error: Error?
+
+    init(from decoder: Decoder) throws {
+        do {
+            value = try Value(from: decoder)
+        } catch {
+            self.error = error
+        }
     }
 }
 

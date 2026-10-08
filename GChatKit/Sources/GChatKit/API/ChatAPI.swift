@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// The Chat operations the app needs. `ChatAPI` is the real implementation.
 public protocol ChatService: Sendable {
@@ -22,6 +23,7 @@ public protocol ChatService: Sendable {
 }
 
 public struct ChatAPI: ChatService {
+    private static let log = Logger(subsystem: "org.themullers.gchat", category: "api")
     private let client: APIClient
 
     public init(client: APIClient) {
@@ -58,7 +60,7 @@ public struct ChatAPI: ChatService {
         in space: String, pageSize: Int, pageToken: String?, after: Date?
     ) async throws -> MessagePage {
         struct Page: Decodable {
-            var messages: [Message]?
+            var messages: [Lossy<Message>]?
             var nextPageToken: String?
         }
         var query = [
@@ -71,7 +73,11 @@ public struct ChatAPI: ChatService {
         }
         let page: Page = try await client.send("GET", url("\(space)/messages", query))
         let token = page.nextPageToken?.isEmpty == false ? page.nextPageToken : nil
-        return MessagePage(messages: page.messages ?? [], nextPageToken: token)
+        // A message that cannot be decoded is left out, so that the rest still load.
+        for error in (page.messages ?? []).compactMap(\.error) {
+            Self.log.error("Skipped a message in \(space, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+        return MessagePage(messages: (page.messages ?? []).compactMap(\.value), nextPageToken: token)
     }
 
     public func sendMessage(_ text: String, to space: String) async throws -> Message {

@@ -63,6 +63,29 @@ import Testing
         #expect(message.markup == "Hi <users/ann>, see this")
         #expect(message.attachment?.first?.url?.absoluteString == "https://drive.google.com/open?id=FILE1")
     }
+
+    @Test func decodesMessageWithUnnamedSenderAndMention() throws {
+        let json = """
+        {"name": "spaces/AAA/messages/m1",
+         "sender": {"type": "HUMAN"},
+         "text": "Hi @Ann",
+         "annotations": [{"type": "USER_MENTION", "startIndex": 3, "length": 4,
+                          "userMention": {"user": {"type": "HUMAN"}}}]}
+        """
+        let message = try RFC3339.makeDecoder().decode(Message.self, from: Data(json.utf8))
+        #expect(message.sender == nil)
+        #expect(message.text == "Hi @Ann")
+        #expect(message.mentionNames.isEmpty)
+    }
+
+    @Test func lossyElementKeepsTheRestOfTheArray() throws {
+        let json = """
+        [{"name": "spaces/AAA/messages/m1"}, {"text": "no name"}, {"name": "spaces/AAA/messages/m3"}]
+        """
+        let elements = try RFC3339.makeDecoder().decode([Lossy<Message>].self, from: Data(json.utf8))
+        #expect(elements.compactMap(\.value).map(\.name) == ["spaces/AAA/messages/m1", "spaces/AAA/messages/m3"])
+        #expect(elements.filter { $0.error != nil }.count == 1)
+    }
 }
 
 @Suite struct MarkupTests {
