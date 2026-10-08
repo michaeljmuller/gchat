@@ -9,10 +9,11 @@
 # release it lists the core features. Without Claude Code, the notes start as
 # the commit subjects.
 #
-# The script then shows the notes and asks what to do: use them, open them in
-# an editor, or give Claude Code a request for a revision, for example "be
-# more concise". It asks again after each change. --no-edit uses the notes
-# without the question.
+# The script then shows the notes and asks what to do: accept them, open them
+# in an editor, give Claude Code instructions for a revision (for example "be
+# more concise"), or quit. It asks again after each change. Quit stops with an
+# error, so scripts/release.sh stops too. --no-edit accepts the notes without
+# the question.
 #
 # The result is build/release/publish/release-notes.html: the notes of all
 # releases, newest first. The same page goes into the app (the Release Notes
@@ -105,16 +106,24 @@ while [ "$edit" = yes ]; do
     echo
     echo "======== End of the release notes ========"
     echo
-    echo "What next?"
-    echo "  Return     use these notes"
-    echo "  e          open them in the editor"
-    echo "  a request  Claude Code writes them again, for example: be more concise"
+    echo "  a  accept these notes"
+    echo "  e  edit them in the editor"
+    echo "  i  give Claude Code instructions for a revision"
+    echo "  q  quit (or Control-C)"
     printf '> '
-    read -r answer || answer=
+    # The end of the input, for example a closed terminal, counts as quit.
+    read -r answer || answer=q
     case "$answer" in
-        "") break ;;
+        a | A) break ;;
         e | E) ${EDITOR:-vi} "$notes" ;;
-        *)
+        q | Q) die "stopped at the release notes; nothing was built or published" ;;
+        i | I)
+            echo "Instructions, for example: be more concise"
+            printf '> '
+            read -r request || request=
+            if [ -z "$request" ]; then
+                continue
+            fi
             echo "Revising"
             if ask_claude "$task
 
@@ -122,7 +131,7 @@ These are the notes so far:
 
 $(grep '^- ' "$notes" || true)
 
-The developer asks for this change to the notes: $answer
+The developer asks for this change to the notes: $request
 
 Apply the request. Change only what the request asks for. If the request
 and the style guide differ, the request is correct for this release. The
@@ -134,6 +143,7 @@ else."; then
                 echo "warning: Claude Code wrote no revision; the notes are unchanged" >&2
             fi
             ;;
+        *) echo "Type a, e, i or q." ;;
     esac
 done
 

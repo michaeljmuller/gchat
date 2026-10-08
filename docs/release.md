@@ -20,13 +20,17 @@ install.md. How updates work is in design.md.
 
 4. The script shows the release notes that Claude Code wrote, and asks
    what to do:
-   - Press Return to use the notes.
-   - Type e to open them in the editor. Lines that start with # are left
-     out. With no lines left, the release has no notes.
-   - Type a request, for example "be more concise" or "put the fixes
-     last". Claude Code writes the notes again.
 
-   The script shows the result and asks again, until the answer is Return.
+       a  accept these notes
+       e  edit them in the editor
+       i  give Claude Code instructions for a revision
+       q  quit (or Control-C)
+
+   With e, lines that start with # are left out, and with no lines left,
+   the release has no notes. With i, the script asks for the instructions,
+   for example "be more concise" or "put the fixes last", and Claude Code
+   writes the notes again. The script shows the result and asks again,
+   until the answer is a or q. With q, nothing is built or published.
 5. Wait for the build and for notarization, usually one to five minutes.
 6. The script uploads the release. Installed copies see it at their next
    check, within a day.
@@ -84,9 +88,10 @@ Code writes:
    version, or the core features for the first release. The rules are in
    release-notes-style.md. If Claude Code is not installed or fails, the
    notes start as the list of commit subjects.
-4. Shows the notes and asks for changes, as in "Make a release", step 4. A
-   request goes to Claude Code with the notes so far. Where the request and
-   release-notes-style.md differ, the request is correct for that release.
+4. Shows the notes and asks what to do, as in "Make a release", step 4.
+   Instructions go to Claude Code with the notes so far. Where they and
+   release-notes-style.md differ, the instructions are correct for that
+   release.
    The notes stay a flat list: the page has no headings inside a release.
 5. Writes build/release/publish/release-notes.html: the new notes as a
    section above the sections of the earlier releases.
