@@ -188,6 +188,48 @@ Most of the user interface was compiled and unit tested, but not reviewed
 on screen. Expect more problems than this list.
 
 
+## Sidebar settings in the View menu
+
+Requested by the owner on October 8, 2026. Not started.
+
+The Settings window has five settings for the sidebar (behavior.md,
+"Settings window"). Some of them change what the window shows at the
+moment, and Mac apps put such choices in the View menu, where they are one
+click away and can have shortcuts. Mail and Finder do this with Sort By and
+with their Show and Hide items.
+
+Candidates to move:
+
+- Sort conversations: a Sort By submenu with Most Recent and Alphabetical,
+  and a check mark on the current one.
+- Show date of last activity: one item with a check mark, or an item that
+  changes between Show Dates and Hide Dates.
+
+Decide for each of these whether it moves or stays in Settings:
+
+- Hide direct messages with deleted users.
+- Hide direct messages with apps.
+- Hide direct messages with unnamed apps. It is locked when the setting
+  above it is on, and a menu must show that too.
+
+Decide also:
+
+- Whether a setting that moves stays in the Settings window as well. Two
+  places for one setting is common on the Mac, but both must show the same
+  state.
+- Shortcuts, if any.
+- Whether GChat has a View menu today, and what else belongs in it (Mac
+  conventions, below).
+
+Work:
+
+- The settings are stored values with the keys in AppSettings
+  (GChat/AppModel.swift). The menu items read and write the same keys, so
+  the sidebar needs no change.
+- The menu items go in AppCommands (GChat/GChatApp.swift).
+- behavior.md lists the settings and the menus. Change both.
+
+
 ## All of a conversation's history
 
 Opening a conversation loads its newest 50 messages. Older messages load 50
