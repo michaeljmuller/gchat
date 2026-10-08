@@ -3,7 +3,9 @@ import CryptoKit
 import GChatKit
 import ImageIO
 import QuickLook
+import QuickLookUI
 import SwiftUI
+import os
 
 // MARK: - Message text
 
@@ -191,6 +193,57 @@ final class AttachmentLoader {
 
 // MARK: - Attachments
 
+/// Log lines for a fault seen in October 2026: a click on an image opened an
+/// empty Quick Look window, and a second click showed the image (to-do.md).
+/// The lines say whether the file was good at the click, and whether the view
+/// was rebuilt while the window was open. They name the cache folder of the
+/// file, which is a hash, and never the file name.
+///
+///     log show --last 1h --predicate 'subsystem == "org.themullers.gchat" AND category == "preview"'
+@MainActor
+enum PreviewLog {
+    private static let log = Logger(subsystem: "org.themullers.gchat", category: "preview")
+
+    private static func describe(_ file: URL?) -> String {
+        guard let file else { return "no file" }
+        let key = file.deletingLastPathComponent().lastPathComponent.prefix(8)
+        let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int) ?? nil
+        let type = file.pathExtension.isEmpty ? "no extension" : file.pathExtension
+        return "\(key) (\(type), \(size.map { "\($0) bytes" } ?? "missing"))"
+    }
+
+    /// A click or the Open command, before the preview is asked for.
+    static func clicked(_ file: URL?, in view: String) {
+        let keyWindow = NSApp.keyWindow?.title ?? "none"
+        log.notice("""
+            \(view, privacy: .public) clicked: \(describe(file), privacy: .public), \
+            app active \(NSApp.isActive), key window \(keyWindow, privacy: .public)
+            """)
+    }
+
+    /// The file that the view asks Quick Look to show changed. Nil is a closed preview.
+    static func changed(from old: URL?, to new: URL?, in view: String) {
+        if let new {
+            let visible = QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible
+            log.notice("""
+                \(view, privacy: .public) preview opens: \(describe(new), privacy: .public), \
+                Quick Look window already visible \(visible)
+                """)
+        } else {
+            log.notice("\(view, privacy: .public) preview closed: \(describe(old), privacy: .public)")
+        }
+    }
+
+    /// The view was rebuilt or removed. With an open preview, the Quick Look window loses its file.
+    static func viewChanged(_ event: String, open file: URL?, in view: String) {
+        guard let file else { return }
+        log.notice("""
+            \(view, privacy: .public) \(event, privacy: .public) while its preview was open: \
+            \(describe(file), privacy: .public)
+            """)
+    }
+}
+
 /// An image uploaded to Chat, shown in the transcript. Click to open it in
 /// Quick Look.
 struct InlineImageView: View {
@@ -216,14 +269,18 @@ struct InlineImageView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(.separator) }
                     .contentShape(Rectangle())
-                    .onTapGesture { previewURL = file }
+                    .onTapGesture { preview() }
                     .contextMenu {
-                        Button("Open") { previewURL = file }
+                        Button("Open") { preview() }
                         if let file {
                             Button("Save As…") { AttachmentFiles.saveCopy(of: file) }
                         }
                     }
                     .quickLookPreview($previewURL)
+                    .onChange(of: previewURL) { old, new in
+                        PreviewLog.changed(from: old, to: new, in: "image")
+                    }
+                    .onDisappear { PreviewLog.viewChanged("disappeared", open: previewURL, in: "image") }
                     .help(attachment.contentName ?? "Image")
                     .accessibilityLabel(attachment.contentName ?? "Image")
                     .accessibilityAddTraits(.isImage)
@@ -239,7 +296,13 @@ struct InlineImageView: View {
         .task(id: attachment.attachmentDataRef?.resourceName) { await load() }
     }
 
+    private func preview() {
+        PreviewLog.clicked(file, in: "image")
+        previewURL = file
+    }
+
     private func load() async {
+        PreviewLog.viewChanged("loaded again", open: previewURL, in: "image")
         do {
             let file = try await AttachmentLoader.shared.file(for: attachment, store: store)
             guard let thumbnail = await Self.thumbnail(of: file) else {
@@ -310,15 +373,19 @@ struct AttachmentChip: View {
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
 
         if attachment.attachmentDataRef?.resourceName != nil {
-            Button { open { previewURL = $0 } } label: { label }
+            Button { open { preview($0) } } label: { label }
                 .buttonStyle(.plain)
                 .disabled(isLoading)
                 .help("Open")
                 .contextMenu {
-                    Button("Open") { open { previewURL = $0 } }
+                    Button("Open") { open { preview($0) } }
                     Button("Save As…") { open { AttachmentFiles.saveCopy(of: $0) } }
                 }
                 .quickLookPreview($previewURL)
+                .onChange(of: previewURL) { old, new in
+                    PreviewLog.changed(from: old, to: new, in: "file")
+                }
+                .onDisappear { PreviewLog.viewChanged("disappeared", open: previewURL, in: "file") }
         } else if let url = attachment.url {
             Link(destination: url) { label }
                 .buttonStyle(.plain)
@@ -326,6 +393,11 @@ struct AttachmentChip: View {
         } else {
             label
         }
+    }
+
+    private func preview(_ file: URL) {
+        PreviewLog.clicked(file, in: "file")
+        previewURL = file
     }
 
     private func open(then action: @escaping (URL) -> Void) {

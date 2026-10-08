@@ -62,6 +62,34 @@ out:
 - Sending images (upload).
 
 
+## Quick Look opens empty
+
+Seen by the owner on October 8, 2026, in the release and in a development
+build: a click on an image in the transcript opened an empty Quick Look
+window. A second click showed the image. Later the same day it did not
+happen again. The cause is not known.
+
+The image was on screen, so its file was in the cache before the click.
+Two possible causes:
+
+- GChat rebuilds the row of the image while the window opens, for example
+  when a message arrives. The window then has no file.
+- Quick Look opens before it is connected to the row. macOS finds the file
+  to show through the focus of the window, and a click on an image does not
+  move the focus.
+
+GChat writes log lines for each click on an image or a file, for each
+opened and closed preview, and when a view is rebuilt or removed with its
+preview open (PreviewLog in GChat/Views/MessageContent.swift). After the
+next empty window, read them with:
+
+    log show --last 1h --predicate 'subsystem == "org.themullers.gchat" AND category == "preview"'
+
+If the file was good at the click, the probable fix is one Quick Look
+controller for the window in place of one for each image. Remove the log
+lines when the cause is found.
+
+
 ## Consider a different name
 
 Not decided. The owner is not sure that the problem is large enough for the
