@@ -19,7 +19,7 @@ third-party dependency: Sparkle, for updates.
                        git, holds an organization's client ID.
     scripts/           release.sh, and the generator for the development
                        icon
-    scripts/release/   the parts that release.sh runs:
+    scripts/support/   the parts that release.sh runs:
                        write-release-notes.sh with its prompt, publish.sh,
                        and bucket.sh, which both read
     docs/              the documents
@@ -447,7 +447,7 @@ project. GChat/Updater.swift owns it.
 
 How an update reaches a copy:
 
-- scripts/release/publish.sh uploads three files to one folder of a public
+- scripts/support/publish.sh uploads three files to one folder of a public
   bucket: the disk image, appcast.xml and release-notes.html. The appcast is
   the file that lists the releases. Sparkle reads it.
 - The app reads the appcast at the address in SUFeedURL in its Info.plist.
@@ -493,8 +493,8 @@ not a secret.
 
 Release notes:
 
-- scripts/release/write-release-notes.sh asks Claude Code (claude -p) for the
-  notes, with the prompt in scripts/release/release-notes-prompt.txt. Claude
+- scripts/support/write-release-notes.sh asks Claude Code (claude -p) for the
+  notes, with the prompt in scripts/support/release-notes-prompt.txt. Claude
   Code can read files and run git log, git show and git diff, and nothing
   else. The rules for the text are in release-notes-style.md, not in the
   prompt.
@@ -513,19 +513,19 @@ Release notes:
   update window then shows the releases that the copy does not have.
 - One page goes to three places. The "Record commit" build phase copies it
   into the app as ReleaseNotes.html, for the Release Notes window
-  (GChat/ReleaseNotesPanel.swift). scripts/release/publish.sh puts it in the
+  (GChat/ReleaseNotesPanel.swift). scripts/support/publish.sh puts it in the
   appcast entry of the new release, for the update window, and uploads it as
   release-notes.html, where the next release reads it as the earlier notes.
 - The app contains the notes, so the notes are written before the build.
-  scripts/release.sh runs scripts/release/write-release-notes.sh first and
+  scripts/release.sh runs scripts/support/write-release-notes.sh first and
   gives the path of the page to the build in the build setting
   GCHAT_RELEASE_NOTES. A build without that setting has no notes.
 - The Release Notes window shows the page as it is. Nothing marks a
   section there, so all sections show, and the top one is the version that
   runs.
-- scripts/release/publish.sh stops if the page is not for the version of the
+- scripts/support/publish.sh stops if the page is not for the version of the
   disk image, or differs from the page in the exported app.
-- The styling of the page is in scripts/release/write-release-notes.sh, and
+- The styling of the page is in scripts/support/write-release-notes.sh, and
   the script writes it again at each release. So all sections look the same.
 
 Rejected (October 8, 2026):

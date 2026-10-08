@@ -1,7 +1,7 @@
 # Release notes style
 
 How the release notes of GChat are written, for whoever writes them: the
-developer, or Claude Code when scripts/release/write-release-notes.sh calls
+developer, or Claude Code when scripts/support/write-release-notes.sh calls
 it. How a release is made and published is in release.md. How the notes reach
 the update window is in design.md.
 
@@ -62,7 +62,7 @@ lines. They do not come from the commits.
 ## Form
 
 The notes of one release are a flat list, 1 to 8 lines.
-scripts/release/write-release-notes.sh adds the heading, with the version and
+scripts/support/write-release-notes.sh adds the heading, with the version and
 the date, and the styling. The writer supplies only the lines.
 
 - Each line starts with "- " and is one sentence that ends with a period.
@@ -96,7 +96,7 @@ text:
   changed again, the line says what it does now.
 
 The earlier notes are the reference for names, length and tone.
-scripts/release/write-release-notes.sh saves them as
+scripts/support/write-release-notes.sh saves them as
 build/release/publish/earlier-notes.html before it asks for new notes. The
 first release has no such file. If the earlier notes and this guide differ,
 this guide is correct.

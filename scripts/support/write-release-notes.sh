@@ -2,7 +2,7 @@
 # Writes the release notes for the next release, before the app is built,
 # because the app contains them. scripts/release.sh calls it.
 #
-#   scripts/release/write-release-notes.sh [--no-edit]
+#   scripts/support/write-release-notes.sh [--no-edit]
 #
 # Claude Code (the claude command) writes the notes for the changes since the
 # last published version, after docs/release-notes-style.md. For the first
@@ -26,13 +26,13 @@ edit=yes
 for option in "$@"; do
     case "$option" in
         --no-edit) edit=no ;;
-        *) echo "usage: scripts/release/write-release-notes.sh [--no-edit]" >&2; exit 2 ;;
+        *) echo "usage: scripts/support/write-release-notes.sh [--no-edit]" >&2; exit 2 ;;
     esac
 done
 
 cd "$(dirname "$0")/../.."
-# shellcheck source=scripts/release/bucket.sh
-. scripts/release/bucket.sh
+# shellcheck source=scripts/support/bucket.sh
+. scripts/support/bucket.sh
 
 # The version that Sparkle compares, the same number that release.sh builds in.
 build=$(git rev-list --count HEAD)
@@ -81,7 +81,7 @@ start_notes() {
 # Fails without Claude Code, and when the reply has no lines.
 ask_claude() {
     command -v claude >/dev/null \
-        && claude -p "$(cat scripts/release/release-notes-prompt.txt)
+        && claude -p "$(cat scripts/support/release-notes-prompt.txt)
 
 $1" --allowedTools "Read" "Bash(git log:*)" "Bash(git show:*)" "Bash(git diff:*)" < /dev/null > "$work/reply.txt" \
         && grep '^- ' "$work/reply.txt" > "$work/generated.txt"
@@ -134,7 +134,7 @@ done
 # sparkle-installed-version. The style hides that section and the older ones,
 # so the window shows the releases that the copy does not have yet. Anywhere
 # else, the page shows all releases. The first line names the version, for
-# scripts/release/publish.sh.
+# scripts/support/publish.sh.
 page="$work/release-notes.html"
 {
     echo "<!-- version $build -->"

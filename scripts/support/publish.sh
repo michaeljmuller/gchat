@@ -4,7 +4,7 @@
 # notes and the appcast (the list of releases that the app reads).
 # scripts/release.sh calls it.
 #
-#   scripts/release/publish.sh build/release/GChat-COMMIT.dmg
+#   scripts/support/publish.sh build/release/GChat-COMMIT.dmg
 #
 # Needs: the disk image and the release notes from one run of
 # scripts/release.sh, Config/Release.env with the bucket and its keys (see
@@ -15,13 +15,13 @@ set -euo pipefail
 
 dmg=${1:-}
 if [ $# -ne 1 ] || [ ! -f "$dmg" ]; then
-    echo "usage: scripts/release/publish.sh build/release/GChat-COMMIT.dmg" >&2
+    echo "usage: scripts/support/publish.sh build/release/GChat-COMMIT.dmg" >&2
     exit 2
 fi
 dmg=$(cd "$(dirname "$dmg")" && pwd)/$(basename "$dmg")
 cd "$(dirname "$0")/../.."
-# shellcheck source=scripts/release/bucket.sh
-. scripts/release/bucket.sh
+# shellcheck source=scripts/support/bucket.sh
+. scripts/support/bucket.sh
 
 name=$(basename "$dmg" .dmg)
 commit=${name#GChat-}
