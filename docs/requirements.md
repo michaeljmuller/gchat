@@ -194,3 +194,6 @@ one:
   built, and the --no-edit option that skips the question.
 - The release script stops when there are uncommitted changes and the
   release is to be published.
+- The release script stops when the commit is not pushed and the release
+  is to be published. The owner suggested it as a question. (October 8,
+  2026)

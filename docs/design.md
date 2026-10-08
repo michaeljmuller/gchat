@@ -460,6 +460,10 @@ How an update reaches a copy:
   The public half of the Sparkle key is SUPublicEDKey in Info.plist.
 - The disk image is the one that people install by hand. There is no
   second package for updates.
+- scripts/release.sh publishes only a commit that is on the remote branch.
+  The version is the number of commits, and the About window names the
+  commit. A local commit can still be changed or dropped. Then the number
+  can go to a different commit, and the commit ID leads nowhere.
 
 No updater in two cases. A build with an empty SUFeedURL or an empty
 SUPublicEDKey has none, because it has nowhere to look or cannot make sure

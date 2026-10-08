@@ -8,9 +8,10 @@ install.md. How updates work is in design.md.
 
 ## Make a release
 
-1. Commit all changes. The script stops at once when there are uncommitted
-   changes, unless the release is not published (--no-publish or
-   --no-notarize). Such a build gets "-modified" after the commit ID.
+1. Commit all changes and push them. The script stops at once when there
+   are uncommitted changes, or when the commit is not on the remote branch,
+   unless the release is not published (--no-publish or --no-notarize). A
+   build from uncommitted changes gets "-modified" after the commit ID.
 2. Make sure that Config/Local.xcconfig has the client ID of the
    organization that gets this release, and the address of its appcast.
 3. Run:

@@ -7,8 +7,9 @@
 # --no-notarize also skips publishing. --no-edit uses the release notes
 # without the question about changes (scripts/release-notes.sh).
 #
-# Stops when there are uncommitted changes, unless the release is not
-# published. Such a build gets "-modified" after the commit ID.
+# Stops when there are uncommitted changes or commits that are not pushed,
+# unless the release is not published. A build from uncommitted changes gets
+# "-modified" after the commit ID.
 #
 # The release notes come first, because the app contains them.
 #
@@ -56,6 +57,19 @@ if [ -n "$(git status --porcelain)" ]; then
     fi
     echo "warning: uncommitted changes; the release will not match any commit" >&2
     version="$version-modified"
+fi
+# A published release names its commit in the About window, and its version
+# is the number of commits. Both are only safe when the commit is on the
+# remote: a local commit can still be changed, and then they match nothing.
+if [ "$publish" = yes ]; then
+    upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null) \
+        || { echo "error: this branch has no upstream branch; push it first" >&2; exit 1; }
+    git fetch --quiet "${upstream%%/*}" \
+        || { echo "error: could not reach the remote to make sure that the commit is pushed" >&2; exit 1; }
+    if ! git merge-base --is-ancestor HEAD "$upstream"; then
+        echo "error: $version is not on $upstream; push, or use --no-publish for a build that is not published" >&2
+        exit 1
+    fi
 fi
 if [ -f Config/Local.xcconfig ]; then
     echo "Built-in organization: $(sed -n 's/^GCHAT_ORGANIZATION *= *//p' Config/Local.xcconfig)"
