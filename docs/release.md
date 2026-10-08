@@ -17,10 +17,10 @@ install.md. How updates work is in design.md.
 
        scripts/release.sh
 
-4. Wait for notarization, usually one to five minutes.
-5. An editor opens with the release notes that Claude Code wrote. Correct
+4. An editor opens with the release notes that Claude Code wrote. Correct
    them, save, and close the editor. Lines that start with # are left out.
    With no lines left, the release has no notes.
+5. Wait for the build and for notarization, usually one to five minutes.
 6. The script uploads the release. Installed copies see it at their next
    check, within a day.
 
@@ -33,7 +33,7 @@ Options:
                     warns people who open such a disk image. Nothing is
                     published.
     --no-publish    make the notarized disk image, and upload nothing
-    --no-edit       publish the release notes as Claude Code wrote them
+    --no-edit       use the release notes as Claude Code wrote them
 
 A release cannot be taken back. A copy that installed it does not go to an
 older version. To correct a release, publish a newer one.
@@ -41,52 +41,67 @@ older version. To correct a release, publish a newer one.
 
 ## What the release script does
 
-1. Archives the Release configuration for Apple silicon and Intel. The
+1. Runs scripts/release-notes.sh (next section). The notes come first,
+   because the app contains them.
+2. Archives the Release configuration for Apple silicon and Intel. The
    build records the commit ID, the number of commits and the time of the
-   commit for the About window. The number of commits is also the version
-   that macOS and the updater use.
-2. Exports the app, signed with the Developer ID Application certificate,
+   commit for the About window, and copies the release notes into the app.
+   The number of commits is also the version that macOS and the updater
+   use.
+3. Exports the app, signed with the Developer ID Application certificate,
    with a secure timestamp and the hardened runtime.
-3. Makes a disk image with the app and a link to /Applications, and signs it.
-4. Sends the disk image to Apple for notarization with the credentials
+4. Makes a disk image with the app and a link to /Applications, and signs it.
+5. Sends the disk image to Apple for notarization with the credentials
    gchat-notary, and waits.
-5. Staples the notarization ticket to the disk image and asks Gatekeeper to
+6. Staples the notarization ticket to the disk image and asks Gatekeeper to
    assess it.
-6. Runs scripts/publish.sh on the disk image.
+7. Runs scripts/publish.sh on the disk image.
 
 The script prints which organization's client ID is in the build.
+
+
+## What the release notes script does
+
+scripts/release-notes.sh writes the notes for the commit that is checked
+out. It uploads nothing, so it can also run alone, to see what Claude Code
+writes:
+
+    scripts/release-notes.sh
+
+1. Downloads appcast.xml and release-notes.html from the folder of the
+   organization in the bucket. The appcast is the list of releases that
+   installed copies read. Without an appcast, this is the first release.
+2. Stops if the bucket already has this version or a newer one.
+3. Asks Claude Code for the notes: the changes since the last published
+   version, or the core features for the first release. The rules are in
+   release-notes-style.md. If Claude Code is not installed or fails, the
+   notes start as the list of commit subjects.
+4. Opens the notes in the editor.
+5. Writes build/release/publish/release-notes.html: the new notes as a
+   section above the sections of the earlier releases.
+
+Without Config/Release.env, scripts/release.sh skips this script. The app
+then has no notes, and the release is not published.
 
 
 ## What the publish script does
 
 scripts/publish.sh publishes one disk image. It can run alone, on a disk
-image that scripts/release.sh made with --no-publish:
+image that scripts/release.sh made with --no-publish, as long as
+build/release is unchanged since then:
 
     scripts/publish.sh build/release/GChat-COMMIT.dmg
 
-1. Stops if the disk image is from uncommitted changes or is not notarized,
-   or if the app in build/release/export reads a different appcast than the
-   one that the script writes.
-2. Downloads appcast.xml and release-notes.html from the folder of the
-   organization in the bucket. The appcast is the list of releases that
-   installed copies read. Without an appcast, this is the first release.
-3. Stops if the bucket already has this version or a newer one.
-4. Asks Claude Code for the release notes: the changes since the last
-   published version, or the core features for the first release. The
-   rules are in release-notes-style.md. If Claude Code is not installed or
-   fails, the notes start as the list of commit subjects.
-5. Opens the notes in the editor.
-6. Adds the notes as a new section at the top of the notes page.
-7. Runs generate_appcast of Sparkle. It signs the disk image with the
+1. Stops if the disk image is from uncommitted changes or is not notarized.
+   Stops if the app in build/release/export reads a different appcast than
+   the one that the script writes, or contains other release notes than
+   build/release/publish/release-notes.html.
+2. Downloads appcast.xml again, and stops if the bucket already has this
+   version or a newer one.
+3. Runs generate_appcast of Sparkle. It signs the disk image with the
    Sparkle key and adds the release, with the notes page, to the appcast.
-8. Uploads the disk image, release-notes.html and appcast.xml, in that
+4. Uploads the disk image, release-notes.html and appcast.xml, in that
    order, and makes sure that each one downloads without a sign-in.
-
-To see the notes that Claude Code writes for a disk image, with no upload:
-
-    scripts/publish.sh build/release/GChat-COMMIT.dmg --dry-run
-
-The files are then in build/release/publish.
 
 
 ## What is in the bucket
@@ -113,6 +128,8 @@ Not done yet (October 8, 2026). Do it with the first releases:
    not the notes of the installed one.
 5. Click Install Update. Make sure that GChat starts again, that the About
    window shows the new commit, and that the sign-in is still there.
+6. Choose GChat > Release Notes. Make sure that the window shows all three
+   releases, in light and dark appearance.
 
 To make an installed copy look for an update at its next launch, without a
 wait of a day:

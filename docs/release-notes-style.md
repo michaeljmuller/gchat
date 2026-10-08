@@ -1,17 +1,21 @@
 # Release notes style
 
 How the release notes of GChat are written, for whoever writes them: the
-developer, or Claude Code when scripts/publish.sh calls it. How a release is
+developer, or Claude Code when scripts/release-notes.sh calls it. How a release is
 made and published is in release.md. How the notes reach the update window
 is in design.md.
 
 
 ## Where the notes show
 
-Release notes show in the update window, when GChat offers a new version.
-The window shows the notes of every release that is newer than the copy
-that runs, newest first. A colleague who skipped two releases sees three
-sections, one below the other.
+Release notes show in two windows:
+
+- The update window, when GChat offers a new version. It shows the notes of
+  every release that is newer than the copy that runs, newest first. A
+  colleague who skipped two releases sees three sections, one below the
+  other.
+- The Release Notes window (GChat > Release Notes). It shows the notes of
+  the version that runs and of all earlier releases, newest first.
 
 So a section is read in two ways: alone, and between other sections. It
 must read correctly in both.
@@ -57,8 +61,8 @@ lines. They do not come from the commits.
 
 ## Form
 
-The notes of one release are a flat list, 1 to 8 lines. scripts/publish.sh
-adds the heading, with the version and the date, and the styling. The
+The notes of one release are a flat list, 1 to 8 lines.
+scripts/release-notes.sh adds the heading, with the version and the date, and the styling. The
 writer supplies only the lines.
 
 - Each line starts with "- " and is one sentence that ends with a period.
@@ -92,7 +96,7 @@ text:
   changed again, the line says what it does now.
 
 The earlier notes are the reference for names, length and tone.
-scripts/publish.sh saves them as build/release/publish/earlier-notes.html
+scripts/release-notes.sh saves them as build/release/publish/earlier-notes.html
 before it asks for new notes. The first release has no such file. If the
 earlier notes and this guide differ, this guide is correct.
 

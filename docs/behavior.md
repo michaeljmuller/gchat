@@ -188,6 +188,11 @@ A release for an organization has an updater. A development build has none,
 and neither has a build without an address for updates. Without an updater,
 Check for Updates is disabled and the two settings do not show.
 
+GChat > Release Notes opens a window with the notes of the version that
+runs and of all earlier releases, newest first. The notes are inside the
+app, so the window needs no network. The item is disabled in a build that
+has no notes, such as a development build.
+
 - GChat looks for a new version once a day.
 - When a newer version exists, a window shows its version and the release
   notes. The notes cover every release that is newer than the copy that

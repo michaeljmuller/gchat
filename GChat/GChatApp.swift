@@ -47,6 +47,8 @@ struct AppCommands: Commands {
             Button("About GChat") { AboutPanel.show() }
             Button("Check for Updates…") { updater.checkForUpdates() }
                 .disabled(!updater.canCheckForUpdates)
+            Button("Release Notes") { ReleaseNotesPanel.show() }
+                .disabled(!ReleaseNotesPanel.isAvailable)
         }
         CommandGroup(replacing: .newItem) {
             Button("New Conversation…") { model.isNewConversationShown = true }

@@ -4,8 +4,10 @@
 #
 #   scripts/release.sh [--no-notarize] [--no-publish] [--no-edit]
 #
-# --no-notarize also skips publishing. --no-edit publishes the release notes
-# without opening them in an editor (scripts/publish.sh).
+# --no-notarize also skips publishing. --no-edit uses the release notes
+# without opening them in an editor (scripts/release-notes.sh).
+#
+# The release notes come first, because the app contains them.
 #
 # The About window shows the commit ID, with "-modified" added when there are
 # uncommitted changes, the number of commits and the time of the commit. The
@@ -26,12 +28,12 @@ set -euo pipefail
 
 notarize=yes
 publish=yes
-publish_options=()
+notes_options=()
 for option in "$@"; do
     case "$option" in
         --no-notarize) notarize=no; publish=no ;;
         --no-publish) publish=no ;;
-        --no-edit) publish_options+=("$option") ;;
+        --no-edit) notes_options+=("$option") ;;
         *) echo "usage: scripts/release.sh [--no-notarize] [--no-publish] [--no-edit]" >&2; exit 2 ;;
     esac
 done
@@ -56,11 +58,22 @@ fi
 rm -rf "$out"
 mkdir -p "$out"
 
+# Writes build/release/publish/release-notes.html, which the "Record commit"
+# build phase copies into the app.
+notes="$root/$out/publish/release-notes.html"
+if [ -f Config/Release.env ]; then
+    scripts/release-notes.sh ${notes_options[@]+"${notes_options[@]}"}
+else
+    echo "No Config/Release.env: no release notes, and nothing is published"
+    publish=no
+fi
+
 echo "Building version $version ($build_number)"
 xcodebuild -project GChat.xcodeproj -scheme GChat -configuration Release \
     -destination "generic/platform=macOS" \
     -derivedDataPath build/release-derived -archivePath "$out/GChat.xcarchive" \
     MARKETING_VERSION="$build_number" CURRENT_PROJECT_VERSION="$build_number" \
+    GCHAT_RELEASE_NOTES="$notes" \
     -quiet archive
 
 echo "Signing with Developer ID"
@@ -91,7 +104,7 @@ rm -rf "$staging" "$out/GChat.xcarchive"
 echo "Done: $dmg"
 
 if [ "$publish" = yes ]; then
-    scripts/publish.sh "$dmg" ${publish_options[@]+"${publish_options[@]}"}
+    scripts/publish.sh "$dmg"
 else
     echo "Not published: installed copies do not see this release"
 fi

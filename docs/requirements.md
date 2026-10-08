@@ -164,6 +164,10 @@ All in the Settings window (October 2, 2026, unless stated):
   shows the notes of all releases since the version that runs, not only of
   the newest. A style guide in docs/ keeps the notes of all releases
   consistent, also when they show together. (October 8, 2026)
+- The release notes can be read in the app without an update, in a window.
+  The app contains its notes, so the window needs no network and marks no
+  section as the current version. The update window shows the newer notes.
+  (October 8, 2026)
 
 
 ## Added without a request

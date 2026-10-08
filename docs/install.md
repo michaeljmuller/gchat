@@ -77,7 +77,8 @@ what changed. Click Install Update. GChat downloads the new version,
 replaces itself and starts again. The sign-in stays.
 
 To look at once, choose GChat > Check for Updates. Settings > General has
-a setting that installs new versions without a question.
+a setting that installs new versions without a question. GChat > Release
+Notes shows what changed in the installed version and in earlier ones.
 
 A copy from before October 8, 2026 has no Check for Updates in the GChat
 menu. Install the new disk image once, the same way as the first time, and

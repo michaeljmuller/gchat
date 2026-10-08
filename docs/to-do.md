@@ -324,7 +324,8 @@ Left:
   repository or a template, and one Sparkle key for each app, so that a
   leaked key affects one app only.
 - The notes page has no styling of its own for a browser. It is a fragment
-  for the update window.
+  for the update window and the Release Notes window.
+- Look at the Release Notes window on screen, in light and dark appearance.
 
 
 ## A script for certificate renewal
