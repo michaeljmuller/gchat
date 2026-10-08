@@ -266,6 +266,41 @@ When the People API answers "not found" for a user, GChat treats the account
 as deleted. A direct message whose member list has only the signed-in user
 is also treated as a conversation with a deleted account.
 
+The conversation list of Google calls some group chats direct messages.
+Seen in October 2026 in one account: 3 of 74 listed direct messages, all
+group chats with their last activity between 2019 and 2021. For these, the
+list says DIRECT_MESSAGE, and a request for the one conversation
+(spaces.get) says GROUP_CHAT. chat.google.com also shows them with the
+direct messages. Where the other members of such a group were deleted, the
+member list has one other person, so the row had the same title as the real
+direct message with that person.
+
+GChat finds them with two signs from the list, and makes sure with one
+request for each candidate:
+
+- The conversation has no threading (UNTHREADED_MESSAGES). All 71 real
+  direct messages were threaded, and all 3 of the others were not.
+- The conversation has the same other member as another direct message. A
+  person has only one direct message with the signed-in person.
+
+If the request says GROUP_CHAT, GChat treats the conversation as a group
+chat from then on. It keeps the answer for each candidate, so each costs
+one request, once. See checkListedTypes() in ChatStore.swift.
+
+Rejected (October 8, 2026):
+
+- The number of members in the list (membershipCount). It is 2 for a real
+  direct message, and also 2 for a group chat with one member left.
+- A request for each listed direct message. It costs one request for each
+  at every first launch.
+- No threading as proof, without the request. It held in one account, and
+  Google does not document it.
+
+Deleted accounts in messages: Google gives the sender the name "Deleted
+User" and no email, and the People API answers "not found". The text of a
+mention keeps the name as it was typed ("@Name"), and the mention still
+holds the user ID. GChat does not use this yet (to-do.md).
+
 All of this is cached in the app's preferences for one account. When a
 different account signs in, GChat discards the cache, so that nothing from
 the previous account shows.

@@ -275,6 +275,28 @@ Left:
   page of the Cloud console shows it under real use.
 
 
+## Group chats with deleted members
+
+Google lists some old group chats as direct messages, and GChat moves them
+to Groups (design.md, "Names, titles and members"). Left:
+
+- The title names only the members that Google still lists. A group of four
+  with two deleted accounts shows as "Megan". Messages from deleted accounts
+  are in the transcript, so GChat can add "Deleted User" to the title after
+  it loaded messages there.
+- A group chat where only the signed-in person is left has the title "Group
+  Chat". Before, it showed as a direct message with "Deleted User", and the
+  configuration hid it. Decide whether to hide such group chats.
+- Names for deleted accounts. The text of a mention keeps the name
+  ("@Name") with the user ID. GChat can remember that name whenever it
+  loads messages, at no extra requests, and show for example "Eric Harper
+  (deleted)" in place of "Deleted User". This covers only people whom
+  somebody mentioned in a conversation of the signed-in person. A scan of
+  old conversations finds more, and costs requests.
+- The two signs were seen in one account. If a listed direct message with
+  neither sign is a group chat, GChat does not find it.
+
+
 ## Startup load
 
 GChat reads many things at the first launch, after a change of account, and

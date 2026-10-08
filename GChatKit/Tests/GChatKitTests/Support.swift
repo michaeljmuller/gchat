@@ -80,6 +80,9 @@ final class FakeChat: ChatService, @unchecked Sendable {
         /// Direct messages that exist on the server but have no messages, keyed by user.
         var existingDMs: [String: Space] = [:]
         var created: [String] = []
+        /// What a request for one conversation answers, where it differs from the list.
+        var details: [String: Space] = [:]
+        var detailCalls: [String] = []
     }
 
     private let lock = NSLock()
@@ -97,6 +100,15 @@ final class FakeChat: ChatService, @unchecked Sendable {
             if state.throttled { throw APIError(status: 429, message: "Too many requests", code: "RESOURCE_EXHAUSTED") }
             return state.spaces
         }
+    }
+
+    func getSpace(_ name: String) async throws -> Space {
+        let found = update { state in
+            state.detailCalls.append(name)
+            return state.details[name] ?? state.spaces.first { $0.name == name }
+        }
+        guard let found else { throw APIError(status: 404, message: "Not found") }
+        return found
     }
 
     func listMessages(in space: String, pageSize: Int, pageToken: String?, after: Date?) async throws -> MessagePage {

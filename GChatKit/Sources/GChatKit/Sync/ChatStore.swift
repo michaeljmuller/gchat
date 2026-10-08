@@ -87,6 +87,9 @@ public final class ChatStore {
     private var partners: [String: String]
     /// Group chat space -> the other members' user resource names.
     private var groupMembers: [String: Set<String>]
+    /// Listed direct message -> its type in a request for that one conversation.
+    /// The list calls some old group chats direct messages (`checkListedTypes`).
+    private var checkedTypes: [String: String]
     private var profiles: [String: Profile]
     /// Users the People API reports as not found, which is how deleted accounts appear.
     private var missingUsers: Set<String>
@@ -96,6 +99,7 @@ public final class ChatStore {
     @ObservationIgnored private var localSpaces: [String: Space] = [:]
     @ObservationIgnored private var profileRequests: Set<String> = []
     @ObservationIgnored private var titleAttempts: Set<String> = []
+    @ObservationIgnored private var typeAttempts: Set<String> = []
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var lastSafetyPoll = Date.distantPast
     /// When a message was last sent or received.
@@ -113,6 +117,7 @@ public final class ChatStore {
         static let titles = "spaceTitles"
         static let partners = "spacePartners"
         static let groupMembers = "groupMembers"
+        static let checkedTypes = "checkedSpaceTypes"
         static let profiles = "profiles"
         static let missingUsers = "missingUsers"
         static let cacheOwner = "cacheOwner"
@@ -146,6 +151,7 @@ public final class ChatStore {
         self.partners = defaults.dictionary(forKey: Keys.partners) as? [String: String] ?? [:]
         self.groupMembers = (defaults.dictionary(forKey: Keys.groupMembers) as? [String: [String]] ?? [:])
             .mapValues(Set.init)
+        self.checkedTypes = defaults.dictionary(forKey: Keys.checkedTypes) as? [String: String] ?? [:]
         self.missingUsers = Set(defaults.stringArray(forKey: Keys.missingUsers) ?? [])
         self.profiles = defaults.data(forKey: Keys.profiles)
             .flatMap { try? JSONDecoder().decode([String: Profile].self, from: $0) } ?? [:]
@@ -159,10 +165,13 @@ public final class ChatStore {
         titles = [:]
         partners = [:]
         groupMembers = [:]
+        checkedTypes = [:]
         profiles = [:]
         missingUsers = []
         selection = nil
-        for key in [Keys.titles, Keys.partners, Keys.groupMembers, Keys.profiles, Keys.missingUsers] {
+        for key in [
+            Keys.titles, Keys.partners, Keys.groupMembers, Keys.checkedTypes, Keys.profiles, Keys.missingUsers,
+        ] {
             defaults.removeObject(forKey: key)
         }
         defaults.set(user, forKey: Keys.cacheOwner)
@@ -422,6 +431,9 @@ public final class ChatStore {
                 if let known = previous[space.name] ?? nil, known > space.lastActiveTime ?? .distantPast {
                     space.lastActiveTime = known
                 }
+                if space.kind == .directMessage, let checked = checkedTypes[space.name] {
+                    space.spaceType = checked
+                }
                 return space
             })
             phase = .ready
@@ -443,13 +455,69 @@ public final class ChatStore {
                 refreshCount += 1
                 if refreshCount % 4 == 0 { await recheckUnread() }
             }
-            Task { await self.resolveTitles() }
+            Task {
+                await self.resolveTitles()
+                // After the titles, because they find the other member of each direct message.
+                await self.checkListedTypes()
+            }
             reportUnread()
         } catch {
             report(error)
             if phase != .ready {
                 phase = .failed(connectionError ?? error.localizedDescription)
             }
+        }
+    }
+
+    /// The conversation list calls some group chats direct messages. Seen in
+    /// October 2026 for group chats from 2019 to 2021: the list says
+    /// DIRECT_MESSAGE, and a request for the one conversation says GROUP_CHAT.
+    /// Such a conversation shows under the name of one member, next to the real
+    /// direct message with that person.
+    ///
+    /// Two signs in the list mark a candidate: no threading (every real direct
+    /// message seen was threaded), or the same other member as another direct
+    /// message (a person has only one). Each candidate costs one request, once.
+    private func checkListedTypes() async {
+        let listed = spaces.filter {
+            $0.kind == .directMessage && $0.singleUserBotDm != true && localSpaces[$0.name] == nil
+        }
+        let shared = Dictionary(grouping: listed.compactMap { partners[$0.name] }, by: { $0 })
+            .filter { $0.value.count > 1 }
+        let candidates = listed.filter { space in
+            guard checkedTypes[space.name] == nil, !typeAttempts.contains(space.name) else { return false }
+            if space.spaceThreadingState == "UNTHREADED_MESSAGES" { return true }
+            return partners[space.name].map { shared[$0] != nil } ?? false
+        }
+        guard !candidates.isEmpty, !isPaused else { return }
+        for space in candidates { typeAttempts.insert(space.name) }
+
+        var changed = false
+        for space in candidates {
+            guard let type = try? await chat.getSpace(space.name).spaceType else {
+                // Tried again at the next refresh of the conversation list.
+                typeAttempts.remove(space.name)
+                continue
+            }
+            checkedTypes[space.name] = type
+            guard type != space.spaceType, let index = spaces.firstIndex(where: { $0.name == space.name })
+            else { continue }
+            Self.log.info("""
+                \(space.name, privacy: .public) is listed as \(space.spaceType ?? "?", privacy: .public) \
+                and is \(type, privacy: .public)
+                """)
+            spaces[index].spaceType = type
+            // The title and the partner were made for a direct message.
+            titles[space.name] = nil
+            partners[space.name] = nil
+            titleAttempts.remove(space.name)
+            changed = true
+        }
+        defaults.set(checkedTypes, forKey: Keys.checkedTypes)
+        if changed {
+            defaults.set(titles, forKey: Keys.titles)
+            defaults.set(partners, forKey: Keys.partners)
+            await resolveTitles()
         }
     }
 

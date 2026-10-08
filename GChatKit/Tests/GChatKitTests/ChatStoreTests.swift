@@ -85,6 +85,55 @@ import Testing
         #expect(store.name(for: User(name: "users/gone", type: "HUMAN")) == "Deleted User")
     }
 
+    /// Google's list calls some old group chats direct messages. A request
+    /// for the one conversation gives the real type.
+    @Test func groupChatsListedAsDirectMessagesMoveToGroups() async throws {
+        let human = { (id: String, name: String?) in
+            Membership(member: User(name: id, displayName: name, type: "HUMAN"))
+        }
+        let me = human("users/me-id", nil)
+        chat.update { state in
+            state.spaces = [
+                // The real direct message with Ann.
+                Space(name: "spaces/ann", spaceType: "DIRECT_MESSAGE", lastActiveTime: now,
+                      spaceThreadingState: "THREADED_MESSAGES"),
+                // A group chat whose other members were deleted: only Ann is listed.
+                Space(name: "spaces/old-group", spaceType: "DIRECT_MESSAGE", lastActiveTime: now,
+                      spaceThreadingState: "THREADED_MESSAGES"),
+                // A group chat with two other members, without threading.
+                Space(name: "spaces/three", spaceType: "DIRECT_MESSAGE", lastActiveTime: now,
+                      spaceThreadingState: "UNTHREADED_MESSAGES"),
+                // A direct message that needs no request.
+                Space(name: "spaces/bob", spaceType: "DIRECT_MESSAGE", lastActiveTime: now,
+                      spaceThreadingState: "THREADED_MESSAGES"),
+            ]
+            state.members["spaces/ann"] = [me, human("users/ann", "Ann Example")]
+            state.members["spaces/old-group"] = [me, human("users/ann", "Ann Example")]
+            state.members["spaces/three"] = [me, human("users/ann", "Ann Example"), human("users/bob", "Bob Other")]
+            state.members["spaces/bob"] = [me, human("users/bob", "Bob Other")]
+            state.details["spaces/old-group"] = Space(name: "spaces/old-group", spaceType: "GROUP_CHAT")
+            state.details["spaces/three"] = Space(name: "spaces/three", spaceType: "GROUP_CHAT")
+        }
+        let store = ChatStore(chat: chat, people: FakePeople(), defaults: defaults)
+        await store.refreshSpaces()
+
+        func title(_ name: String) -> String { store.title(for: store.space(named: name)!) }
+        #expect(await eventually { store.groupChats.map(\.name).sorted() == ["spaces/old-group", "spaces/three"] })
+        #expect(store.directMessages.map(\.name).sorted() == ["spaces/ann", "spaces/bob"])
+        #expect(title("spaces/ann") == "Ann Example")
+        #expect(await eventually { title("spaces/old-group") == "Ann" })
+        #expect(await eventually { title("spaces/three") == "Ann, Bob" })
+        // Only the candidates cost a request: the two with the same other member, and the one without threading.
+        #expect(chat.update { $0.detailCalls.sorted() } == ["spaces/ann", "spaces/old-group", "spaces/three"])
+
+        // The answers are kept: the next list, and the next launch, ask nothing.
+        await store.refreshSpaces()
+        let second = ChatStore(chat: chat, people: FakePeople(), defaults: defaults)
+        await second.refreshSpaces()
+        #expect(second.groupChats.map(\.name).sorted() == ["spaces/old-group", "spaces/three"])
+        #expect(chat.update { $0.detailCalls.count } == 3)
+    }
+
     @Test func appConversationsAreNamedFromTheirMessages() async throws {
         chat.update { state in
             state.spaces = [

@@ -173,6 +173,15 @@ All in the Settings window (October 2, 2026, unless stated):
   (October 8, 2026)
 
 
+## Conversation kinds
+
+- A group chat that Google lists as a direct message must not show as a
+  second direct message with one of its members. The owner saw "Megan
+  Hoffman" twice under Direct. GChat uses what Google returns to find such
+  conversations, including the sign that two direct messages have the same
+  other member. (October 8, 2026)
+
+
 ## Added without a request
 
 These features trace to no request. The owner must keep or remove each

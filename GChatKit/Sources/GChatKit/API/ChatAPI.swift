@@ -4,6 +4,9 @@ import os
 /// The Chat operations the app needs. `ChatAPI` is the real implementation.
 public protocol ChatService: Sendable {
     func listSpaces() async throws -> [Space]
+    /// One conversation by its resource name, "spaces/A". Its type can differ
+    /// from the type in the conversation list (see `ChatStore.checkListedTypes`).
+    func getSpace(_ name: String) async throws -> Space
     /// Returns one page, newest first. `after` limits it to messages created later.
     func listMessages(in space: String, pageSize: Int, pageToken: String?, after: Date?) async throws -> MessagePage
     func sendMessage(_ text: String, to space: String) async throws -> Message
@@ -54,6 +57,10 @@ public struct ChatAPI: ChatService {
             token = page.nextPageToken
         } while token?.isEmpty == false
         return spaces
+    }
+
+    public func getSpace(_ name: String) async throws -> Space {
+        try await client.send("GET", url(name))
     }
 
     public func listMessages(

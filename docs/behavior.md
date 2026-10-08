@@ -57,6 +57,10 @@ requests behind each feature are in requirements.md.
 - A direct message with a Chat app has the app's name, or "App" if Google
   gives no name.
 - Titles follow name changes on the next launch.
+- Google lists some old group chats as direct messages. GChat shows them as
+  group chats, under Groups. Such a row can show under Direct with a
+  person's name for a moment after the first launch, until GChat asked
+  Google about it.
 
 
 ## Transcript
