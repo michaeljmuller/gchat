@@ -1,4 +1,5 @@
-# Shared by write-release-notes.sh and publish.sh, which read it with ".": the
+# Shared by check-publish.sh, write-release-notes.sh and publish.sh, which read
+# it with ".": the
 # bucket that holds the releases, from Config/Release.env, and signed requests
 # to it. Run from the root of the repository.
 

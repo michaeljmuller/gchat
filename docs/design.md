@@ -19,9 +19,9 @@ third-party dependency: Sparkle, for updates.
                        git, holds an organization's client ID.
     scripts/           release.sh, and the generator for the development
                        icon
-    scripts/support/   the parts that release.sh runs:
+    scripts/support/   the parts that release.sh runs: check-publish.sh,
                        write-release-notes.sh with its prompt, publish.sh,
-                       and bucket.sh, which both read
+                       and bucket.sh, which all three read
     docs/              the documents
 
 GChatKit has unit tests that run without a network. The views have no

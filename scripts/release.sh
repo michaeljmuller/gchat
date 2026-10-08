@@ -7,8 +7,10 @@
 # --no-notarize also skips publishing. --no-edit uses the release notes
 # without the question about changes (scripts/support/write-release-notes.sh).
 #
-# Stops when there are uncommitted changes or commits that are not pushed,
-# unless the release is not published. A build from uncommitted changes gets
+# Before anything else, makes sure that the release can be published
+# (scripts/support/check-publish.sh). Stops when something is missing, when
+# there are uncommitted changes, or when commits are not pushed, unless the
+# release is not published. A build from uncommitted changes gets
 # "-modified" after the commit ID.
 #
 # The release notes come first, because the app contains them.
@@ -70,6 +72,8 @@ if [ "$publish" = yes ]; then
         echo "error: $version is not on $upstream; push, or use --no-publish for a build that is not published" >&2
         exit 1
     fi
+    # Everything that the last step needs, before the first step runs.
+    scripts/support/check-publish.sh
 fi
 if [ -f Config/Local.xcconfig ]; then
     echo "Built-in organization: $(sed -n 's/^GCHAT_ORGANIZATION *= *//p' Config/Local.xcconfig)"
@@ -86,8 +90,7 @@ notes="$root/$out/publish/release-notes.html"
 if [ -f Config/Release.env ]; then
     scripts/support/write-release-notes.sh ${notes_options[@]+"${notes_options[@]}"}
 else
-    echo "No Config/Release.env: no release notes, and nothing is published"
-    publish=no
+    echo "No Config/Release.env: the app gets no release notes"
 fi
 
 echo "Building version $version ($build_number)"

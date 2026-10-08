@@ -53,6 +53,15 @@ older version. To correct a release, publish a newer one.
 
 ## What the release script does
 
+Before the first step, the script makes sure that the release can be
+published, with scripts/support/check-publish.sh. It stops, and names every
+problem, if one of these is missing or wrong: the changes are committed and
+pushed, Config/Release.env and access to the bucket, the appcast address
+and the Sparkle public key in the build settings, the Sparkle private key
+in the login Keychain, the notarization credentials, and a version that
+is not published yet. The check can run alone. With --no-publish or
+--no-notarize, the script skips it.
+
 1. Runs scripts/support/write-release-notes.sh (next section). The notes come
    first, because the app contains them.
 2. Archives the Release configuration for Apple silicon and Intel. The
@@ -96,8 +105,8 @@ Code writes:
 5. Writes build/release/publish/release-notes.html: the new notes as a
    section above the sections of the earlier releases.
 
-Without Config/Release.env, scripts/release.sh skips this script. The app
-then has no notes, and the release is not published.
+Without Config/Release.env, a release cannot be published. A build with
+--no-publish then skips this script, and the app has no notes.
 
 
 ## What the publish script does
