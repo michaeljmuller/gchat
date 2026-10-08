@@ -518,8 +518,8 @@ Release notes:
   release-notes.html, where the next release reads it as the earlier notes.
 - The app contains the notes, so the notes are written before the build.
   scripts/release.sh runs scripts/release/write-release-notes.sh first and
-  gives the path of the page to the build in the build setting GCHAT_RELEASE_NOTES. A build
-  without that setting has no notes.
+  gives the path of the page to the build in the build setting
+  GCHAT_RELEASE_NOTES. A build without that setting has no notes.
 - The Release Notes window shows the page as it is. Nothing marks a
   section there, so all sections show, and the top one is the version that
   runs.
