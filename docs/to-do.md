@@ -220,8 +220,8 @@ October 2, 2026.
 
 Left:
 
-- Where colleagues download releases, and how they learn about a new one.
-  release.md has the current suggestion.
+- How colleagues learn about GChat and get the first disk image. Releases
+  are in the bucket, and installed copies update themselves (release.md).
 - A period of real use before the first distribution (release.md).
 - A discussion with the owners of IT and security at Zia Consulting.
 - Neutral versions of install.md and directory-sharing-request.md, if the
@@ -309,64 +309,22 @@ Batching, researched in October 2026:
   none.
 
 
-## Automatic updates on a host for several apps
+## Automatic updates: what is left
 
-A colleague gets a new version only by installing it again. Sparkle is the
-standard updater for Mac apps outside the App Store. The app reads a feed
-(the appcast), shows that a new version is available, downloads it, makes
-sure that it is genuine, and installs it.
+GChat updates itself with Sparkle from a bucket (design.md, release.md).
+Left:
 
-Sparkle needs these files at fixed HTTPS addresses that work without a
-sign-in:
-
-- The appcast, an XML file that lists the releases.
-- The update files (disk images or zips).
-
-A Google Drive folder shared with the organization does not work, because
-GChat cannot sign in to Google to download.
-
-Make the host generic, so that other Mac apps can use it. One host, one
-folder for each app:
-
-    https://<updates host>/<app>/appcast.xml
-    https://<updates host>/<app>/<app>-<build>.dmg
-
-Choices:
-
-- A public bucket in Hetzner object storage. No server process. Probably the
-  best fit for several apps.
-- A static site on the Hetzner host behind Caddy. Needs a deployment change,
-  which is the job of the release manager.
-- GitHub Releases and GitHub Pages. Free, with versions, but for one
-  repository, so less suited to several apps.
-
-Anyone with the address can download from any of these. The Zia build
-contains the Zia Consulting client ID and name. The client is Internal, so
-only Zia accounts can sign in, and the client ID is not a secret. Decide
-whether that is acceptable.
-
-In GChat:
-
-- Sparkle as a Swift package, the first third-party dependency.
-- "Check for Updates…" in the app menu, and a setting to look for updates
-  automatically.
-- The appcast address and the public key of Sparkle in
-  Config/Base.xcconfig.
-- Sparkle makes sure that the Developer ID signature and its own EdDSA
-  signature are valid. Updates keep the bundle ID and the team.
-
-Shared tools for every app:
-
-- One script that signs a notarized disk image with sign_update of Sparkle,
-  uploads it to the folder of the app, and makes the appcast again with
-  generate_appcast. scripts/release.sh calls it. Keep the script in its own
-  repository or as a template.
-- One Sparkle key for each app. generate_keys --account <app> keeps the
-  private key in the login Keychain. A leaked key then affects one app only.
-  Keep a backup of each key. Without it, installed copies of that app accept
-  no more updates.
-- Upload credentials for the bucket stay outside the repositories.
-- Release notes, optional, as HTML for each release.
+- The first published release, and the test of an update from end to end
+  (release.md).
+- Copies that colleagues installed before October 8, 2026 have no updater.
+  Each needs one more installation by hand.
+- Old disk images stay in the bucket. Nothing deletes them.
+- Other Mac apps can use the same layout, one folder for each app.
+  scripts/publish.sh is written for GChat. A shared script needs its own
+  repository or a template, and one Sparkle key for each app, so that a
+  leaked key affects one app only.
+- The notes page has no styling of its own for a browser. It is a fragment
+  for the update window.
 
 
 ## A script for certificate renewal

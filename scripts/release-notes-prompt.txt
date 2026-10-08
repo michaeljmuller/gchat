@@ -1,0 +1,18 @@
+Write the release notes for a new release of GChat.
+
+Read docs/release-notes-style.md first. Follow it exactly. It says who reads
+the notes, what gets a line, and the form of a line.
+
+Read docs/behavior.md for the names that the app shows.
+
+If the file with the earlier notes exists, read it. Use the same names and
+the same sentence form. Do not repeat its lines.
+
+If this is not the first release, find the changes with git log, git show
+and git diff on the commit range below. Look at the files that a commit
+changed when its subject does not say whether the app changed.
+
+Do not change any file.
+
+Reply with the lines of the notes only. Each line starts with "- ". Write
+nothing before or after the lines.

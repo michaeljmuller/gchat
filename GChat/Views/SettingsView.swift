@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
+    @Environment(Updater.self) private var updater
     @AppStorage(AppSettings.notificationsKey) private var notificationsEnabled = true
     @AppStorage(AppSettings.previewsKey) private var notificationPreviews = true
     @AppStorage(AppSettings.hideDeletedKey) private var hideDeletedUsers = true
@@ -51,6 +52,12 @@ struct SettingsView: View {
 
             Section("General") {
                 Toggle("Quit GChat when the window is closed", isOn: $quitOnClose)
+                if updater.isAvailable {
+                    @Bindable var updater = updater
+                    Toggle("Check for updates automatically", isOn: $updater.checksAutomatically)
+                    Toggle("Download and install updates automatically", isOn: $updater.downloadsAutomatically)
+                        .disabled(!updater.checksAutomatically)
+                }
             }
 
             Section("Sidebar") {

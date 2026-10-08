@@ -5,6 +5,7 @@ import SwiftUI
 struct GChatApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel()
+    @State private var updater = Updater()
 
     var body: some Scene {
         Window("GChat", id: "main") {
@@ -14,12 +15,13 @@ struct GChatApp: App {
         }
         .defaultSize(width: 980, height: 680)
         .commands {
-            AppCommands(model: model)
+            AppCommands(model: model, updater: updater)
         }
 
         Settings {
             SettingsView()
                 .environment(model)
+                .environment(updater)
         }
     }
 }
@@ -38,10 +40,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct AppCommands: Commands {
     let model: AppModel
+    let updater: Updater
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
             Button("About GChat") { AboutPanel.show() }
+            Button("Check for Updates…") { updater.checkForUpdates() }
+                .disabled(!updater.canCheckForUpdates)
         }
         CommandGroup(replacing: .newItem) {
             Button("New Conversation…") { model.isNewConversationShown = true }

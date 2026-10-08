@@ -6,8 +6,8 @@ behavior.md. How to build it is in development.md.
 
 ## Shape
 
-GChat is a SwiftUI app with one Swift package and no third-party
-dependencies.
+GChat is a SwiftUI app with one Swift package of its own and one
+third-party dependency: Sparkle, for updates.
 
     GChat.xcodeproj    the Xcode project. It includes the files in GChat/
                        automatically.
@@ -17,8 +17,9 @@ dependencies.
                        API clients, polling, read markers, Chat markup
     Config/            build configuration. Local.xcconfig, which is not in
                        git, holds an organization's client ID.
-    scripts/           release.sh, and the generator for the development
-                       icon
+    scripts/           release.sh, publish.sh with the prompt for the
+                       release notes, and the generator for the
+                       development icon
     docs/              the documents
 
 GChatKit has unit tests that run without a network. The views have no
@@ -368,7 +369,10 @@ scroll position, which is not reliable in a standard SwiftUI list.
 - Downloaded attachments, in the app's Caches folder.
 - Messages are only in memory.
 
-Nothing goes anywhere except to Google.
+Nothing goes anywhere except to Google, with one exception: a copy with an
+updater reads the appcast and downloads new versions from the bucket (see
+Updates). Sparkle keeps the time of its last check and the two update
+settings in the app's preferences.
 
 
 ## The Keychain item
@@ -431,3 +435,91 @@ the difference. Debug builds must not go to other people.
 - Debug builds have a separate icon with an orange hammer badge. The badge
   stays inside the rounded square of the icon. If part of an icon is outside
   that shape, macOS shows the whole icon small, on a gray plate.
+
+
+## Updates
+
+Sparkle 2, the usual updater for Mac apps outside the App Store, updates
+GChat. It is a Swift package, pinned in Package.resolved inside the Xcode
+project. GChat/Updater.swift owns it.
+
+How an update reaches a copy:
+
+- scripts/publish.sh uploads three files to one folder of a public bucket:
+  the disk image, appcast.xml and release-notes.html. The appcast is the
+  file that lists the releases. Sparkle reads it.
+- The app reads the appcast at the address in SUFeedURL in its Info.plist.
+  The value comes from GCHAT_APPCAST_URL in Config/Local.xcconfig. Each
+  organization's build has its own client ID, so each has its own folder
+  and its own appcast.
+- Sparkle compares sparkle:version in the appcast with CFBundleVersion of
+  the copy. Both are the number of commits (see Versions).
+- Sparkle accepts a download only if two signatures are valid: the EdDSA
+  signature in the appcast, made with the Sparkle key of GChat, and the
+  Developer ID signature of the new app, from the same team as the old one.
+  The public half of the Sparkle key is SUPublicEDKey in Info.plist.
+- The disk image is the one that people install by hand. There is no
+  second package for updates.
+
+No updater in two cases. A build with an empty SUFeedURL or an empty
+SUPublicEDKey has none, because it has nowhere to look or cannot make sure
+that an update is genuine. A Debug build has none, because its version is 1
+and every release looks newer.
+
+The sandbox: GChat is sandboxed, and a sandboxed app cannot replace itself.
+Sparkle does it through a helper that runs outside the sandbox. This needs
+SUEnableInstallerLauncherService in Info.plist and a mach-lookup exception
+for two service names in GChat.entitlements. Sparkle's separate downloader
+service is not used, because GChat can already make network requests.
+
+SUEnableAutomaticChecks is on, so Sparkle does not ask at the second launch
+whether to look for updates. The setting in the Settings window turns it
+off.
+
+What the bucket learns from a copy: its IP address and, in the user agent,
+the versions of GChat and macOS. Sparkle can send a system profile, and
+GChat leaves that off.
+
+The bucket is public. Anyone with the address can download the Zia
+Consulting build, which holds its client ID and organization name. The
+client is Internal, so only Zia accounts can sign in, and the client ID is
+not a secret.
+
+Release notes:
+
+- scripts/publish.sh asks Claude Code (claude -p) for the notes, with the
+  prompt in scripts/release-notes-prompt.txt. Claude Code can read files
+  and run git log, git show and git diff, and nothing else. The rules for
+  the text are in release-notes-style.md, not in the prompt.
+- The script finds the last published version in the appcast. The version
+  is the number of commits, so commit number N in the history is version N,
+  and no tags are needed.
+- With no appcast in the bucket, the release is the first one, and the
+  notes list core features.
+- release-notes.html holds one section for each release, newest first. Each
+  section has the attribute data-sparkle-version. Sparkle 2.5 and later
+  adds the class sparkle-installed-version to the section of the version
+  that runs. A style rule hides that section and all sections after it. The
+  update window then shows the releases that the copy does not have. The
+  script puts the whole page in the appcast entry of the new release.
+- The styling of the page is in scripts/publish.sh, and the script writes
+  it again at each release. So all sections look the same.
+
+Rejected (October 8, 2026):
+
+- A Google Drive folder. Sparkle cannot sign in to Google to download.
+- A static site on the Hetzner host behind Caddy. It needs a change to the
+  deployment. The bucket needs no server process.
+- GitHub Releases. It works only for a public repository, and it serves one
+  repository. The bucket layout can serve other apps.
+- Release notes kept in a file in the repository. The commit that adds the
+  notes changes the number of commits, so the notes describe the version
+  before their own.
+- Release notes from commit subjects alone. About half of the commits
+  change only documents or the relay.
+- Uploading with an S3 command line tool. curl signs S3 requests itself
+  (--aws-sigv4), so nothing is installed on the Mac.
+
+Not verified yet (October 8, 2026): an update from end to end on an
+installed copy, and that the update window hides the sections of the
+installed version and older ones. release.md has the test.

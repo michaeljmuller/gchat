@@ -9,3 +9,7 @@ GCHAT_ORGANIZATION = Example Organization
 // files "//" starts a comment, so write the URL with $() between the slashes.
 GCHAT_RELAY_URL = https:/$()/relay.example.com
 GCHAT_EVENTS_TOPIC = projects/my-project/topics/gchat-events
+
+// Optional: automatic updates (docs/release.md). The appcast is in the folder
+// that S3_PREFIX names in Config/Release.env.
+GCHAT_APPCAST_URL = https:/$()/my-bucket.fsn1.your-objectstorage.com/example/appcast.xml

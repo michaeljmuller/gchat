@@ -41,6 +41,9 @@ organization name. The sign-in screen then shows only a Sign In button.
 Without the file, the sign-in screen asks for the client ID.
 Config/Local.xcconfig.example shows the format. The file is not in git.
 
+A Debug build has no updater (design.md), so it never replaces itself with
+a release.
+
 
 ## Tests
 

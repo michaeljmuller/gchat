@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C0A000000000000000000010 /* GChatKit in Frameworks */ = {isa = PBXBuildFile; productRef = C0A000000000000000000011 /* GChatKit */; };
+		C0A000000000000000000013 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = C0A000000000000000000014 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0A000000000000000000010 /* GChatKit in Frameworks */,
+				C0A000000000000000000013 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +86,7 @@
 			name = GChat;
 			packageProductDependencies = (
 				C0A000000000000000000011 /* GChatKit */,
+				C0A000000000000000000014 /* Sparkle */,
 			);
 			productName = GChat;
 			productReference = C0A000000000000000000001 /* GChat.app */;
@@ -115,6 +118,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				C0A000000000000000000012 /* XCLocalSwiftPackageReference "GChatKit" */,
+				C0A000000000000000000015 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C0A000000000000000000005 /* Products */;
@@ -296,10 +300,26 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		C0A000000000000000000015 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		C0A000000000000000000011 /* GChatKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GChatKit;
+		};
+		C0A000000000000000000014 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0A000000000000000000015 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

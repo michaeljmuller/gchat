@@ -12,5 +12,13 @@
 	<string>$(GCHAT_EVENTS_TOPIC)</string>
 	<key>GChatSourceURL</key>
 	<string>$(GCHAT_SOURCE_URL)</string>
+	<key>SUFeedURL</key>
+	<string>$(GCHAT_APPCAST_URL)</string>
+	<key>SUPublicEDKey</key>
+	<string>$(GCHAT_SPARKLE_PUBLIC_KEY)</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
 </dict>
 </plist>

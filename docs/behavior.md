@@ -153,6 +153,10 @@ requests behind each feature are in requirements.md.
 General:
 
 - Quit GChat when the window is closed. Off by default.
+- Check for updates automatically. On by default. Only in a build that has
+  an updater (next section).
+- Download and install updates automatically. Off by default. Locked when
+  the setting above is off.
 
 Sidebar:
 
@@ -176,6 +180,28 @@ Notifications:
 Account:
 
 - The signed-in name and email address, the OAuth client ID, and Sign Out.
+
+
+## Updates
+
+A release for an organization has an updater. A development build has none,
+and neither has a build without an address for updates. Without an updater,
+Check for Updates is disabled and the two settings do not show.
+
+- GChat looks for a new version once a day.
+- When a newer version exists, a window shows its version and the release
+  notes. The notes cover every release that is newer than the copy that
+  runs, newest first. The buttons are Install Update, Remind Me Later and
+  Skip This Version.
+- Install Update downloads the new version, makes sure that it is genuine,
+  replaces the app and starts it again. The sign-in and the settings stay.
+- With "Download and install updates automatically" on, GChat downloads a
+  new version without a question, and installs it when GChat quits.
+- GChat > Check for Updates looks at once. If there is no newer version, a
+  window says so.
+
+The version in these windows is the number of commits, for example 143. The
+About window shows the same number after the commit ID.
 
 
 ## About window

@@ -9,3 +9,4 @@ xcuserdata/
 Config/Local.xcconfig
 src/docker/.env
 volumes/
+Config/Release.env

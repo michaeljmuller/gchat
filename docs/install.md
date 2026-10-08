@@ -61,7 +61,9 @@ opens System Settings.
 - Names, photos and conversation titles, in the preferences of the app.
 - Images and files that were opened, in the cache of the app, up to 300 MB.
 - Messages stay in memory only. GChat sends nothing anywhere except to
-  Google.
+  Google. To look for a new version, GChat reads a file on a server that
+  Mike Muller rents. That request holds the version of GChat and of macOS,
+  and nothing about the account or the messages.
 
 Sign Out, in Settings, deletes the token and the cached files. To remove
 the access of GChat at Google, go to myaccount.google.com > Security >
@@ -70,5 +72,13 @@ Third-party apps.
 
 ## Update
 
-Install a new version the same way, and replace the old one in the
-Applications folder. The sign-in stays.
+GChat looks for a new version once a day. When one exists, a window shows
+what changed. Click Install Update. GChat downloads the new version,
+replaces itself and starts again. The sign-in stays.
+
+To look at once, choose GChat > Check for Updates. Settings > General has
+a setting that installs new versions without a question.
+
+A copy from before October 8, 2026 has no Check for Updates in the GChat
+menu. Install the new disk image once, the same way as the first time, and
+replace the old copy in the Applications folder.

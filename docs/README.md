@@ -10,7 +10,9 @@ says what GChat is and what it requires.
   store
 - prerequisites.md: tools, accounts and keys that a build or release needs
 - development.md: building, testing and reviewing changes
-- release.md: making a disk image and distributing it
+- release.md: making a disk image and publishing it, so that installed
+  copies update themselves
+- release-notes-style.md: how release notes are written
 - deployment.md: deploying the relay, the server component, on Google
   Cloud and the host
 - install.md: installing and signing in, for Zia Consulting colleagues

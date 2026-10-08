@@ -1,7 +1,11 @@
 #!/bin/bash
-# Builds a signed, notarized disk image of GChat for other people.
+# Builds a signed, notarized disk image of GChat for other people, and
+# publishes it so that installed copies update themselves.
 #
-#   scripts/release.sh [--no-notarize]
+#   scripts/release.sh [--no-notarize] [--no-publish] [--no-edit]
+#
+# --no-notarize also skips publishing. --no-edit publishes the release notes
+# without opening them in an editor (scripts/publish.sh).
 #
 # The About window shows the commit ID, with "-modified" added when there are
 # uncommitted changes, the number of commits and the time of the commit. The
@@ -13,14 +17,24 @@
 # notarization credentials stored with
 #   xcrun notarytool store-credentials gchat-notary ...
 # (set NOTARY_PROFILE to use another name). Config/Local.xcconfig decides
-# which organization's client ID is built in.
+# which organization's client ID is built in. Publishing needs more: see
+# scripts/publish.sh.
 #
 # The result is build/release/GChat-COMMIT.dmg.
 
 set -euo pipefail
 
 notarize=yes
-[ "${1:-}" = "--no-notarize" ] && notarize=no
+publish=yes
+publish_options=()
+for option in "$@"; do
+    case "$option" in
+        --no-notarize) notarize=no; publish=no ;;
+        --no-publish) publish=no ;;
+        --no-edit) publish_options+=("$option") ;;
+        *) echo "usage: scripts/release.sh [--no-notarize] [--no-publish] [--no-edit]" >&2; exit 2 ;;
+    esac
+done
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
@@ -75,3 +89,9 @@ fi
 
 rm -rf "$staging" "$out/GChat.xcarchive"
 echo "Done: $dmg"
+
+if [ "$publish" = yes ]; then
+    scripts/publish.sh "$dmg" ${publish_options[@]+"${publish_options[@]}"}
+else
+    echo "Not published: installed copies do not see this release"
+fi

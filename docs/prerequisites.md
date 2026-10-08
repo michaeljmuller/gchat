@@ -14,7 +14,13 @@ release.md.
 - Docker Desktop, for the relay. It is built, run and tested in containers,
   so no Python is installed on the Mac.
 
-Nothing else is installed. The Mac app has no third-party dependencies.
+- For a release: Claude Code (the claude command), signed in. It writes the
+  release notes. Without it, the release script puts the commit subjects in
+  the editor.
+
+Nothing else is installed. The Mac app has one third-party dependency,
+Sparkle, the updater. Xcode downloads it at the first build, with its
+command line tools, into build/SourcePackages.
 
 
 ## On the host
@@ -41,6 +47,39 @@ deployment.md.
 
   Keep the .p8 file outside the repository. The API key is made in App Store
   Connect under Users and Access > Integrations > App Store Connect API.
+
+
+## Publishing releases
+
+Installed copies update themselves from a bucket in object storage
+(release.md). A release that is published needs these:
+
+- A bucket in S3-compatible object storage whose objects can be public. The
+  current one is mmuller-gchat at Hetzner, location fsn1.
+- Config/Release.env with the endpoint, the bucket, the folder for the
+  organization's build, and an access key that can write to the bucket. Copy
+  Config/Release.env.example. The file is not in git.
+- GCHAT_APPCAST_URL in Config/Local.xcconfig: the address of appcast.xml in
+  that folder. Config/Local.xcconfig.example shows the form.
+- The Sparkle key. Sparkle accepts an update only if this key signed it.
+  The private half is in the login Keychain of the Mac that releases, under
+  the account gchat. The public half is GCHAT_SPARKLE_PUBLIC_KEY in
+  Config/Base.xcconfig.
+
+To make the Sparkle key, once, after a first build of the app:
+
+    build/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_keys --account gchat
+
+The command prints the public half. Put it in Config/Base.xcconfig. Then
+save a copy of the private half outside the repository, for example in a
+password manager:
+
+    build/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_keys --account gchat -x <file>
+
+Do not lose the private half. Installed copies accept no update that a
+different key signed, so each colleague then installs a new disk image by
+hand. To put the key on another Mac, run generate_keys --account gchat -f
+<file> there.
 
 
 ## Google

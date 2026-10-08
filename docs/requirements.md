@@ -156,6 +156,14 @@ All in the Settings window (October 2, 2026, unless stated):
 - A development workflow: use the released app every day, use the
   development build only to review a change, and switch between them with no
   friction. (October 3, 2026)
+- The app sees that a new version exists, and updates itself. The version
+  stays the number of commits. Releases are in the Hetzner bucket
+  mmuller-gchat. (October 8, 2026)
+- Release notes, written by Claude Code when a release is published. The
+  notes of the first release list the core features. The update window
+  shows the notes of all releases since the version that runs, not only of
+  the newest. A style guide in docs/ keeps the notes of all releases
+  consistent, also when they show together. (October 8, 2026)
 
 
 ## Added without a request
@@ -173,3 +181,7 @@ one:
   when the directory is not available.
 - Edited and deleted messages change in an open conversation at once, when
   push delivery works. The events for them came with push delivery.
+- Two settings for updates: "Check for updates automatically" and
+  "Download and install updates automatically".
+- The editor that opens with the release notes before a release is
+  published, and the --no-edit option that skips it.

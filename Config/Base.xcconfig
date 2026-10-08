@@ -18,4 +18,13 @@ GCHAT_EVENTS_TOPIC =
 // files "//" starts a comment, so write the URL as https:/$()/github.com/...
 GCHAT_SOURCE_URL = https:/$()/github.com/michaeljmuller/gchat
 
+// Automatic updates (docs/design.md). The address of the appcast, the file
+// that lists the releases of an organization's build. Set in Local.xcconfig,
+// written as https:/$()/host/path. Empty means that the app has no updater.
+GCHAT_APPCAST_URL =
+
+// The public half of the Sparkle key that signs every release
+// (docs/prerequisites.md). Not a secret.
+GCHAT_SPARKLE_PUBLIC_KEY =
+
 #include? "Local.xcconfig"
