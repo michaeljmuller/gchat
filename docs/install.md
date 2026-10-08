@@ -54,6 +54,14 @@ opens System Settings.
   messages, send files, or search message text.
 
 
+## If something goes wrong
+
+Choose Help > Report a Problem, directly after the problem. Write what
+happened, read the report, and click Save. Then send the saved file to Mike
+Muller, for example in a chat message or an email. GChat sends nothing
+itself. The window says what the report contains.
+
+
 ## What GChat keeps on the Mac
 
 - The sign-in token from Google, in the login Keychain, as "GChat Google

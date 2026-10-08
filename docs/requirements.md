@@ -182,6 +182,17 @@ All in the Settings window (October 2, 2026, unless stated):
   other member. (October 8, 2026)
 
 
+## Problem reports
+
+- People can collect the log of a release and send it in a bug report.
+  (October 8, 2026)
+- Help > Report a Problem. The window says what kind of information the
+  report holds. It has Copy, Share with the share icon, and Save. No email:
+  colleagues use Gmail in a browser. (October 8, 2026)
+- Log lines for the Quick Look fault, where a first click on an image
+  opened an empty window. (October 8, 2026)
+
+
 ## Added without a request
 
 These features trace to no request. The owner must keep or remove each

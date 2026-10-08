@@ -59,6 +59,23 @@ public struct ChatAPI: ChatService {
         return spaces
     }
 
+    /// What failed to decode and where, without the value. The full
+    /// description of a decoding error can quote the value, which can be the
+    /// content of a message, and log lines go into problem reports.
+    static func summary(of error: Error) -> String {
+        guard let error = error as? DecodingError else { return String(describing: type(of: error)) }
+        func path(_ context: DecodingError.Context) -> String {
+            context.codingPath.map(\.stringValue).joined(separator: ".")
+        }
+        switch error {
+        case .typeMismatch(let type, let context): return "wrong type for \(type) at \(path(context))"
+        case .valueNotFound(let type, let context): return "no value for \(type) at \(path(context))"
+        case .keyNotFound(let key, let context): return "no key \(key.stringValue) at \(path(context))"
+        case .dataCorrupted(let context): return "bad data at \(path(context))"
+        @unknown default: return "decoding error"
+        }
+    }
+
     public func getSpace(_ name: String) async throws -> Space {
         try await client.send("GET", url(name))
     }
@@ -82,7 +99,7 @@ public struct ChatAPI: ChatService {
         let token = page.nextPageToken?.isEmpty == false ? page.nextPageToken : nil
         // A message that cannot be decoded is left out, so that the rest still load.
         for error in (page.messages ?? []).compactMap(\.error) {
-            Self.log.error("Skipped a message in \(space, privacy: .public): \(String(describing: error), privacy: .public)")
+            Self.log.error("Skipped a message in \(space, privacy: .public): \(Self.summary(of: error), privacy: .public)")
         }
         return MessagePage(messages: (page.messages ?? []).compactMap(\.value), nextPageToken: token)
     }

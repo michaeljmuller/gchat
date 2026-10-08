@@ -584,3 +584,52 @@ Not verified yet (October 8, 2026): an update from end to end on an
 installed copy, and that the update window hides the sections of the
 installed version and older ones. release.md has the test. Nobody looked at
 the Release Notes window on screen.
+
+
+## Logs and problem reports
+
+GChat writes log lines to the log of macOS, under the subsystem
+org.themullers.gchat. A problem report (behavior.md) holds the lines of the
+current run. So each log line can end up with the developer.
+
+Rule for every log line: no message text, no names of people, no file
+names, no tokens. IDs of users and conversations, names of Chat apps, error
+text from Google and from macOS, and times are allowed. In particular:
+
+- A decoding error is logged as its kind and the field, not with its full
+  description. The description can quote the value that failed, and the
+  value can be message content. See ChatAPI.summary(of:).
+- The title of a window is the name of the conversation, so no line logs
+  it.
+- A file is named by the start of its cache folder, which is a hash.
+
+Checked on October 8, 2026, for all log lines at that time.
+
+How the report is made (GChat/ProblemReport.swift):
+
+- OSLogStore with the scope of the current process gives the lines. A
+  sandboxed app cannot read the lines of earlier runs or of other apps.
+  Lines of the level debug are not kept. Lines of the levels info, notice
+  and error are.
+- The report keeps the newest 5000 lines.
+- GChat sends nothing. Copy, Share and Save are the only ways out, and each
+  needs a click by the person.
+
+Rejected (October 8, 2026):
+
+- An email with the report attached. macOS can make one only in Apple Mail.
+  Most colleagues use Gmail in a browser. A mailto link carries no
+  attachment.
+- Sending with the Gmail API. It needs a permission to send email for every
+  person.
+- An upload to the relay. The relay stores nothing about people today.
+- A notice in a separate alert before the report window. People dismiss
+  alerts without reading. The notice is in the window, above the text that
+  it describes.
+- A log file of GChat's own, to cover earlier runs. It is one more thing
+  stored on the Mac.
+
+Not verified yet (October 8, 2026): that OSLogStore gives the lines inside
+the sandbox of GChat. A test outside the sandbox gave them. If macOS
+refuses, the report says so in place of the log. Nobody looked at the
+window on screen.

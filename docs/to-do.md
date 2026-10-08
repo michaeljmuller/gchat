@@ -90,6 +90,19 @@ controller for the window in place of one for each image. Remove the log
 lines when the cause is found.
 
 
+## Problem reports: what is left
+
+Help > Report a Problem makes a report with the log (design.md). Left:
+
+- Make sure that the log shows in a report from a real build. Not verified
+  inside the sandbox.
+- Look at the window on screen.
+- "Send to the developer" through Chat, as a file in the direct message
+  with the developer. It needs file upload, which GChat does not have. A
+  plain message is too short for a log: Google allows 4096 characters.
+- The log covers the current run only.
+
+
 ## Consider a different name
 
 Not decided. The owner is not sure that the problem is large enough for the

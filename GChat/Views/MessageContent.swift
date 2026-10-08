@@ -197,7 +197,8 @@ final class AttachmentLoader {
 /// empty Quick Look window, and a second click showed the image (to-do.md).
 /// The lines say whether the file was good at the click, and whether the view
 /// was rebuilt while the window was open. They name the cache folder of the
-/// file, which is a hash, and never the file name.
+/// file, which is a hash, and never the file name. They give the kind of the
+/// key window and not its title, which is the name of the conversation.
 ///
 ///     log show --last 1h --predicate 'subsystem == "org.themullers.gchat" AND category == "preview"'
 @MainActor
@@ -214,7 +215,7 @@ enum PreviewLog {
 
     /// A click or the Open command, before the preview is asked for.
     static func clicked(_ file: URL?, in view: String) {
-        let keyWindow = NSApp.keyWindow?.title ?? "none"
+        let keyWindow = NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "none"
         log.notice("""
             \(view, privacy: .public) clicked: \(describe(file), privacy: .public), \
             app active \(NSApp.isActive), key window \(keyWindow, privacy: .public)

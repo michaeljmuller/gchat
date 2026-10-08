@@ -50,6 +50,10 @@ struct AppCommands: Commands {
             Button("Release Notes") { ReleaseNotesPanel.show() }
                 .disabled(!ReleaseNotesPanel.isAvailable)
         }
+        // GChat has no help book, so the standard Help item leads nowhere.
+        CommandGroup(replacing: .help) {
+            Button("Report a Problem…") { ProblemReportPanel.show() }
+        }
         CommandGroup(replacing: .newItem) {
             Button("New Conversation…") { model.isNewConversationShown = true }
                 .keyboardShortcut("n")

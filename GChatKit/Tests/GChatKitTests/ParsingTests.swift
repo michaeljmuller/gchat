@@ -22,6 +22,23 @@ import Testing
 }
 
 @Suite struct ModelTests {
+    /// Log lines go into problem reports, so a decoding failure must not quote the value.
+    @Test func decodingFailureIsSummarizedWithoutTheValue() throws {
+        let json = Data(#"{"name": "spaces/a/messages/b", "createTime": "a secret text"}"#.utf8)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let text = try decoder.singleValueContainer().decode(String.self)
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Bad date \(text)"))
+        }
+        do {
+            _ = try decoder.decode(Message.self, from: json)
+            Issue.record("The message decoded")
+        } catch {
+            #expect(String(describing: error).contains("a secret text"))
+            #expect(ChatAPI.summary(of: error) == "bad data at createTime")
+        }
+    }
+
     @Test func decodesSpaces() throws {
         let json = """
         {"spaces": [
