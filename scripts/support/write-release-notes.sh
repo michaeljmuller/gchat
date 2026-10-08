@@ -97,11 +97,19 @@ else
 fi
 
 while [ "$edit" = yes ]; do
+    # Rules above and below the notes show where they start and end.
+    echo
+    echo "======== Release notes for version $build ========"
     echo
     grep '^- ' "$notes" || echo "(no notes)"
     echo
-    echo "Return: use these notes.  e: open them in the editor."
-    printf 'Or type a request for Claude Code, for example "be more concise": '
+    echo "======== End of the release notes ========"
+    echo
+    echo "What next?"
+    echo "  Return     use these notes"
+    echo "  e          open them in the editor"
+    echo "  a request  Claude Code writes them again, for example: be more concise"
+    printf '> '
     read -r answer || answer=
     case "$answer" in
         "") break ;;
