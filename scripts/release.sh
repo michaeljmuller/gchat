@@ -5,7 +5,7 @@
 #   scripts/release.sh [--no-notarize] [--no-publish] [--no-edit]
 #
 # --no-notarize also skips publishing. --no-edit uses the release notes
-# without the question about changes (scripts/write-release-notes.sh).
+# without the question about changes (scripts/release/write-release-notes.sh).
 #
 # Stops when there are uncommitted changes or commits that are not pushed,
 # unless the release is not published. A build from uncommitted changes gets
@@ -24,7 +24,7 @@
 #   xcrun notarytool store-credentials gchat-notary ...
 # (set NOTARY_PROFILE to use another name). Config/Local.xcconfig decides
 # which organization's client ID is built in. Publishing needs more: see
-# scripts/publish.sh.
+# scripts/release/publish.sh.
 #
 # The result is build/release/GChat-COMMIT.dmg.
 
@@ -84,7 +84,7 @@ mkdir -p "$out"
 # build phase copies into the app.
 notes="$root/$out/publish/release-notes.html"
 if [ -f Config/Release.env ]; then
-    scripts/write-release-notes.sh ${notes_options[@]+"${notes_options[@]}"}
+    scripts/release/write-release-notes.sh ${notes_options[@]+"${notes_options[@]}"}
 else
     echo "No Config/Release.env: no release notes, and nothing is published"
     publish=no
@@ -126,7 +126,7 @@ rm -rf "$staging" "$out/GChat.xcarchive"
 echo "Done: $dmg"
 
 if [ "$publish" = yes ]; then
-    scripts/publish.sh "$dmg"
+    scripts/release/publish.sh "$dmg"
 else
     echo "Not published: installed copies do not see this release"
 fi

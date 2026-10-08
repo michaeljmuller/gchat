@@ -320,7 +320,7 @@ Left:
   Each needs one more installation by hand.
 - Old disk images stay in the bucket. Nothing deletes them.
 - Other Mac apps can use the same layout, one folder for each app.
-  scripts/publish.sh is written for GChat. A shared script needs its own
+  scripts/release/publish.sh is written for GChat. A shared script needs its own
   repository or a template, and one Sparkle key for each app, so that a
   leaked key affects one app only.
 - The notes page has no styling of its own for a browser. It is a fragment

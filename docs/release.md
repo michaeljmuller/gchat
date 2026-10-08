@@ -49,8 +49,8 @@ older version. To correct a release, publish a newer one.
 
 ## What the release script does
 
-1. Runs scripts/write-release-notes.sh (next section). The notes come first,
-   because the app contains them.
+1. Runs scripts/release/write-release-notes.sh (next section). The notes come
+   first, because the app contains them.
 2. Archives the Release configuration for Apple silicon and Intel. The
    build records the commit ID, the number of commits and the time of the
    commit for the About window, and copies the release notes into the app.
@@ -63,18 +63,18 @@ older version. To correct a release, publish a newer one.
    gchat-notary, and waits.
 6. Staples the notarization ticket to the disk image and asks Gatekeeper to
    assess it.
-7. Runs scripts/publish.sh on the disk image.
+7. Runs scripts/release/publish.sh on the disk image.
 
 The script prints which organization's client ID is in the build.
 
 
 ## What the release notes script does
 
-scripts/write-release-notes.sh writes the notes for the commit that is checked
-out. It uploads nothing, so it can also run alone, to see what Claude Code
-writes:
+scripts/release/write-release-notes.sh writes the notes for the commit that is
+checked out. It uploads nothing, so it can also run alone, to see what Claude
+Code writes:
 
-    scripts/write-release-notes.sh
+    scripts/release/write-release-notes.sh
 
 1. Downloads appcast.xml and release-notes.html from the folder of the
    organization in the bucket. The appcast is the list of releases that
@@ -97,11 +97,11 @@ then has no notes, and the release is not published.
 
 ## What the publish script does
 
-scripts/publish.sh publishes one disk image. It can run alone, on a disk
+scripts/release/publish.sh publishes one disk image. It can run alone, on a disk
 image that scripts/release.sh made with --no-publish, as long as
 build/release is unchanged since then:
 
-    scripts/publish.sh build/release/GChat-COMMIT.dmg
+    scripts/release/publish.sh build/release/GChat-COMMIT.dmg
 
 1. Stops if the disk image is from uncommitted changes or is not notarized.
    Stops if the app in build/release/export reads a different appcast than
