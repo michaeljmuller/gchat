@@ -5,7 +5,7 @@
 #   scripts/release.sh [--no-notarize] [--no-publish] [--no-edit]
 #
 # --no-notarize also skips publishing. --no-edit uses the release notes
-# without the question about changes (scripts/release-notes.sh).
+# without the question about changes (scripts/write-release-notes.sh).
 #
 # Stops when there are uncommitted changes or commits that are not pushed,
 # unless the release is not published. A build from uncommitted changes gets
@@ -84,7 +84,7 @@ mkdir -p "$out"
 # build phase copies into the app.
 notes="$root/$out/publish/release-notes.html"
 if [ -f Config/Release.env ]; then
-    scripts/release-notes.sh ${notes_options[@]+"${notes_options[@]}"}
+    scripts/write-release-notes.sh ${notes_options[@]+"${notes_options[@]}"}
 else
     echo "No Config/Release.env: no release notes, and nothing is published"
     publish=no

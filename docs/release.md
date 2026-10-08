@@ -49,7 +49,7 @@ older version. To correct a release, publish a newer one.
 
 ## What the release script does
 
-1. Runs scripts/release-notes.sh (next section). The notes come first,
+1. Runs scripts/write-release-notes.sh (next section). The notes come first,
    because the app contains them.
 2. Archives the Release configuration for Apple silicon and Intel. The
    build records the commit ID, the number of commits and the time of the
@@ -70,11 +70,11 @@ The script prints which organization's client ID is in the build.
 
 ## What the release notes script does
 
-scripts/release-notes.sh writes the notes for the commit that is checked
+scripts/write-release-notes.sh writes the notes for the commit that is checked
 out. It uploads nothing, so it can also run alone, to see what Claude Code
 writes:
 
-    scripts/release-notes.sh
+    scripts/write-release-notes.sh
 
 1. Downloads appcast.xml and release-notes.html from the folder of the
    organization in the bucket. The appcast is the list of releases that

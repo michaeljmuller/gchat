@@ -17,7 +17,7 @@ third-party dependency: Sparkle, for updates.
                        API clients, polling, read markers, Chat markup
     Config/            build configuration. Local.xcconfig, which is not in
                        git, holds an organization's client ID.
-    scripts/           release.sh with its parts release-notes.sh and
+    scripts/           release.sh with its parts write-release-notes.sh and
                        publish.sh, the prompt for the release notes, and
                        the generator for the development icon
     docs/              the documents
@@ -491,10 +491,10 @@ not a secret.
 
 Release notes:
 
-- scripts/release-notes.sh asks Claude Code (claude -p) for the notes, with
-  the prompt in scripts/release-notes-prompt.txt. Claude Code can read files
-  and run git log, git show and git diff, and nothing else. The rules for
-  the text are in release-notes-style.md, not in the prompt.
+- scripts/write-release-notes.sh asks Claude Code (claude -p) for the notes,
+  with the prompt in scripts/release-notes-prompt.txt. Claude Code can read
+  files and run git log, git show and git diff, and nothing else. The rules
+  for the text are in release-notes-style.md, not in the prompt.
 - The developer can ask for a revision in plain words. The script sends the
   request to Claude Code again, with the notes so far. Each call is
   separate, so the notes so far are the only memory between calls.
@@ -514,15 +514,15 @@ Release notes:
   entry of the new release, for the update window, and uploads it as
   release-notes.html, where the next release reads it as the earlier notes.
 - The app contains the notes, so the notes are written before the build.
-  scripts/release.sh runs release-notes.sh first and gives the path of the
-  page to the build in the build setting GCHAT_RELEASE_NOTES. A build
+  scripts/release.sh runs write-release-notes.sh first and gives the path of
+  the page to the build in the build setting GCHAT_RELEASE_NOTES. A build
   without that setting has no notes.
 - The Release Notes window shows the page as it is. Nothing marks a
   section there, so all sections show, and the top one is the version that
   runs.
 - scripts/publish.sh stops if the page is not for the version of the disk
   image, or differs from the page in the exported app.
-- The styling of the page is in scripts/release-notes.sh, and the script
+- The styling of the page is in scripts/write-release-notes.sh, and the script
   writes it again at each release. So all sections look the same.
 
 Rejected (October 8, 2026):

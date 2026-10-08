@@ -2,7 +2,7 @@
 # Writes the release notes for the next release, before the app is built,
 # because the app contains them. scripts/release.sh calls it.
 #
-#   scripts/release-notes.sh [--no-edit]
+#   scripts/write-release-notes.sh [--no-edit]
 #
 # Claude Code (the claude command) writes the notes for the changes since the
 # last published version, after docs/release-notes-style.md. For the first
@@ -26,7 +26,7 @@ edit=yes
 for option in "$@"; do
     case "$option" in
         --no-edit) edit=no ;;
-        *) echo "usage: scripts/release-notes.sh [--no-edit]" >&2; exit 2 ;;
+        *) echo "usage: scripts/write-release-notes.sh [--no-edit]" >&2; exit 2 ;;
     esac
 done
 
