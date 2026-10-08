@@ -491,6 +491,9 @@ Release notes:
   the prompt in scripts/release-notes-prompt.txt. Claude Code can read files
   and run git log, git show and git diff, and nothing else. The rules for
   the text are in release-notes-style.md, not in the prompt.
+- The developer can ask for a revision in plain words. The script sends the
+  request to Claude Code again, with the notes so far. Each call is
+  separate, so the notes so far are the only memory between calls.
 - The script finds the last published version in the appcast. The version
   is the number of commits, so commit number N in the history is version N,
   and no tags are needed.

@@ -8,18 +8,24 @@ install.md. How updates work is in design.md.
 
 ## Make a release
 
-1. Commit all changes. A release from uncommitted changes gets "-modified"
-   after the commit ID, so it matches no commit, and it cannot be
-   published.
+1. Commit all changes. The script stops at once when there are uncommitted
+   changes, unless the release is not published (--no-publish or
+   --no-notarize). Such a build gets "-modified" after the commit ID.
 2. Make sure that Config/Local.xcconfig has the client ID of the
    organization that gets this release, and the address of its appcast.
 3. Run:
 
        scripts/release.sh
 
-4. An editor opens with the release notes that Claude Code wrote. Correct
-   them, save, and close the editor. Lines that start with # are left out.
-   With no lines left, the release has no notes.
+4. The script shows the release notes that Claude Code wrote, and asks
+   what to do:
+   - Press Return to use the notes.
+   - Type e to open them in the editor. Lines that start with # are left
+     out. With no lines left, the release has no notes.
+   - Type a request, for example "be more concise" or "put the fixes
+     last". Claude Code writes the notes again.
+
+   The script shows the result and asks again, until the answer is Return.
 5. Wait for the build and for notarization, usually one to five minutes.
 6. The script uploads the release. Installed copies see it at their next
    check, within a day.
@@ -33,7 +39,8 @@ Options:
                     warns people who open such a disk image. Nothing is
                     published.
     --no-publish    make the notarized disk image, and upload nothing
-    --no-edit       use the release notes as Claude Code wrote them
+    --no-edit       use the release notes as Claude Code wrote them, with
+                    no question
 
 A release cannot be taken back. A copy that installed it does not go to an
 older version. To correct a release, publish a newer one.
@@ -76,7 +83,10 @@ writes:
    version, or the core features for the first release. The rules are in
    release-notes-style.md. If Claude Code is not installed or fails, the
    notes start as the list of commit subjects.
-4. Opens the notes in the editor.
+4. Shows the notes and asks for changes, as in "Make a release", step 4. A
+   request goes to Claude Code with the notes so far. Where the request and
+   release-notes-style.md differ, the request is correct for that release.
+   The notes stay a flat list: the page has no headings inside a release.
 5. Writes build/release/publish/release-notes.html: the new notes as a
    section above the sections of the earlier releases.
 

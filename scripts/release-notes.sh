@@ -7,8 +7,12 @@
 # Claude Code (the claude command) writes the notes for the changes since the
 # last published version, after docs/release-notes-style.md. For the first
 # release it lists the core features. Without Claude Code, the notes start as
-# the commit subjects. An editor then opens with the notes. --no-edit skips
-# the editor.
+# the commit subjects.
+#
+# The script then shows the notes and asks what to do: use them, open them in
+# an editor, or give Claude Code a request for a revision, for example "be
+# more concise". It asks again after each change. --no-edit uses the notes
+# without the question.
 #
 # The result is build/release/publish/release-notes.html: the notes of all
 # releases, newest first. The same page goes into the app (the Release Notes
@@ -64,26 +68,66 @@ else
 fi
 
 notes="$work/notes.txt"
-{
-    echo "# Release notes for version $build, $day."
-    echo "# One line for each change, each starting with \"- \". Lines that start"
-    echo "# with # are left out. With no lines, this version gets no notes."
-    echo "# The rules are in docs/release-notes-style.md."
-} > "$notes"
-if command -v claude >/dev/null \
-    && claude -p "$(cat scripts/release-notes-prompt.txt)
+# start_notes: the comment lines at the top of the notes file.
+start_notes() {
+    {
+        echo "# Release notes for version $build, $day."
+        echo "# One line for each change, each starting with \"- \". Lines that start"
+        echo "# with # are left out. With no lines, this version gets no notes."
+        echo "# The rules are in docs/release-notes-style.md."
+    } > "$notes"
+}
+# ask_claude TEXT: the lines that Claude Code writes go to generated.txt.
+# Fails without Claude Code, and when the reply has no lines.
+ask_claude() {
+    command -v claude >/dev/null \
+        && claude -p "$(cat scripts/release-notes-prompt.txt)
 
-$task" --allowedTools "Read" "Bash(git log:*)" "Bash(git show:*)" "Bash(git diff:*)" > "$work/generated.txt" \
-    && grep -q '^- ' "$work/generated.txt"; then
-    grep '^- ' "$work/generated.txt" >> "$notes"
+$1" --allowedTools "Read" "Bash(git log:*)" "Bash(git show:*)" "Bash(git diff:*)" < /dev/null > "$work/reply.txt" \
+        && grep '^- ' "$work/reply.txt" > "$work/generated.txt"
+}
+
+start_notes
+if ask_claude "$task"; then
+    cat "$work/generated.txt" >> "$notes"
 else
     echo "warning: Claude Code wrote no notes; using the commit subjects" >&2
     echo "# Claude Code wrote no notes. These are the commit subjects." >> "$notes"
     git log --reverse --format='- %s' "$range" >> "$notes"
 fi
-if [ "$edit" = yes ]; then
-    ${EDITOR:-vi} "$notes"
-fi
+
+while [ "$edit" = yes ]; do
+    echo
+    grep '^- ' "$notes" || echo "(no notes)"
+    echo
+    echo "Return: use these notes.  e: open them in the editor."
+    printf 'Or type a request for Claude Code, for example "be more concise": '
+    read -r answer || answer=
+    case "$answer" in
+        "") break ;;
+        e | E) ${EDITOR:-vi} "$notes" ;;
+        *)
+            echo "Revising"
+            if ask_claude "$task
+
+These are the notes so far:
+
+$(grep '^- ' "$notes" || true)
+
+The developer asks for this change to the notes: $answer
+
+Apply the request. Change only what the request asks for. If the request
+and the style guide differ, the request is correct for this release. The
+form of the reply stays the same: lines that start with \"- \", and nothing
+else."; then
+                start_notes
+                cat "$work/generated.txt" >> "$notes"
+            else
+                echo "warning: Claude Code wrote no revision; the notes are unchanged" >&2
+            fi
+            ;;
+    esac
+done
 
 # The page with the notes of all releases, newest first. In the update
 # window, Sparkle marks the section of the version that runs with the class

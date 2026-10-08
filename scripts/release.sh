@@ -5,7 +5,10 @@
 #   scripts/release.sh [--no-notarize] [--no-publish] [--no-edit]
 #
 # --no-notarize also skips publishing. --no-edit uses the release notes
-# without opening them in an editor (scripts/release-notes.sh).
+# without the question about changes (scripts/release-notes.sh).
+#
+# Stops when there are uncommitted changes, unless the release is not
+# published. Such a build gets "-modified" after the commit ID.
 #
 # The release notes come first, because the app contains them.
 #
@@ -46,6 +49,11 @@ build_number=$(git rev-list --count HEAD)
 version=$(git rev-parse --short HEAD)
 
 if [ -n "$(git status --porcelain)" ]; then
+    if [ "$publish" = yes ]; then
+        echo "error: uncommitted changes; commit them, or use --no-publish for a build that is not published" >&2
+        git status --short >&2
+        exit 1
+    fi
     echo "warning: uncommitted changes; the release will not match any commit" >&2
     version="$version-modified"
 fi

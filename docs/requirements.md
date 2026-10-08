@@ -164,6 +164,9 @@ All in the Settings window (October 2, 2026, unless stated):
   shows the notes of all releases since the version that runs, not only of
   the newest. A style guide in docs/ keeps the notes of all releases
   consistent, also when they show together. (October 8, 2026)
+- The developer can send the notes back to Claude Code for a revision,
+  with a request such as "be more concise" or "separate the fixes from the
+  new functions". (October 8, 2026)
 - The release notes can be read in the app without an update, in a window.
   The app contains its notes, so the window needs no network and marks no
   section as the current version. The update window shows the newer notes.
@@ -187,5 +190,7 @@ one:
   push delivery works. The events for them came with push delivery.
 - Two settings for updates: "Check for updates automatically" and
   "Download and install updates automatically".
-- The editor that opens with the release notes before a release is
-  published, and the --no-edit option that skips it.
+- The choice to open the release notes in an editor before a release is
+  built, and the --no-edit option that skips the question.
+- The release script stops when there are uncommitted changes and the
+  release is to be published.
