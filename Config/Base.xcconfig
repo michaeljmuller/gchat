@@ -25,6 +25,7 @@ GCHAT_APPCAST_URL =
 
 // The public half of the Sparkle key that signs every release
 // (docs/prerequisites.md). Not a secret.
-GCHAT_SPARKLE_PUBLIC_KEY =
+GCHAT_SPARKLE_PUBLIC_KEY = /txa4aaKZdkGvImnZTsOKjweWi/iK/BWI7oR5PpbDoM=
 
 #include? "Local.xcconfig"
+
