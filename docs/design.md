@@ -611,6 +611,9 @@ How the report is made (GChat/ProblemReport.swift):
   sandboxed app cannot read the lines of earlier runs or of other apps.
   Lines of the level debug are not kept. Lines of the levels info, notice
   and error are.
+- At launch, GChat writes its commit and version, the macOS version and
+  the kind of processor to the log. A log that was read with the log
+  command of macOS then says where it comes from, like a report does.
 - The report keeps the newest 5000 lines.
 - GChat sends nothing. Copy, Share and Save are the only ways out, and each
   needs a click by the person.

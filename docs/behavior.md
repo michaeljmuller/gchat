@@ -223,8 +223,8 @@ it on.
   contain.
 - A field takes a description of what happened.
 - Below it is the whole report: the description, the versions of GChat and
-  macOS, the time when GChat started, and the log lines of GChat since
-  then.
+  macOS, the kind of processor, the time when GChat started, and the log
+  lines of GChat since then.
 - Copy puts the report on the clipboard. Share opens the share sheet of
   macOS with the report as a text file. Save writes the report to a file
   and shows it in Finder.

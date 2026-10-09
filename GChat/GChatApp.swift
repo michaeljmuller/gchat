@@ -30,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// By default the app keeps running without a window, so notifications
     /// still arrive. The setting makes closing the window quit the app.
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ProblemReport.logVersions()
         AttachmentFiles.prune()
     }
 

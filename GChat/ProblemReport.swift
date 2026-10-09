@@ -11,23 +11,38 @@ enum ProblemReport {
     /// A long session can log many lines. The newest ones matter.
     private static let lineLimit = 5000
 
-    /// The versions of GChat and macOS, and when GChat was started.
-    static func header() -> String {
+    /// The versions of GChat and macOS, and the kind of processor. Also
+    /// written to the log at launch, so that a log read with the log command
+    /// says which build and system it comes from.
+    static func versions() -> [String] {
         var build: [String: String] = [:]
         if let url = Bundle.main.url(forResource: "BuildInfo", withExtension: "plist"),
            let values = NSDictionary(contentsOf: url) as? [String: String] {
             build = values
         }
-        let info = ProcessInfo.processInfo
         let organization = Bundle.main.object(forInfoDictionaryKey: "GChatOrganization") as? String ?? ""
+        #if arch(arm64)
+        let processor = "Apple silicon"
+        #else
+        let processor = "Intel"
+        #endif
         return [
-            "GChat problem report, \(Date().formatted(.iso8601))",
             "GChat: commit \(build["commit"] ?? "unknown"), version \(build["commitCount"] ?? "unknown"), "
                 + "\(build["configuration"] ?? "unknown") build"
                 + (organization.isEmpty ? "" : ", for \(organization)"),
-            "macOS: \(info.operatingSystemVersionString)",
-            "GChat started: \(processStart?.formatted(.iso8601) ?? "unknown")",
-        ].joined(separator: "\n")
+            "macOS: \(ProcessInfo.processInfo.operatingSystemVersionString), \(processor)",
+        ]
+    }
+
+    static func logVersions() {
+        let log = Logger(subsystem: subsystem, category: "launch")
+        for line in versions() { log.notice("\(line, privacy: .public)") }
+    }
+
+    static func header() -> String {
+        (["GChat problem report, \(Date().formatted(.iso8601))"] + versions()
+            + ["GChat started: \(processStart?.formatted(.iso8601) ?? "unknown")"])
+            .joined(separator: "\n")
     }
 
     /// When this process started, from the kernel.
