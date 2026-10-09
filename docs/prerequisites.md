@@ -7,7 +7,12 @@ release.md.
 
 ## On the Mac
 
-- macOS 15 or later to run the app. Development used macOS 27.
+- macOS 15 or later to run the app. Development used macOS 27. Not verified
+  yet: that GChat works on macOS 15 and 26. The build is made for macOS 15,
+  so every system function that GChat calls exists there, but nobody ran
+  GChat on a version before 27. One function sets the minimum: the tracking
+  of the scroll position in the transcript (onScrollGeometryChange) needs
+  macOS 15.
 - Xcode 16 or later, the full app from the App Store. Development used
   Xcode 27.
 - git.
