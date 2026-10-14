@@ -102,6 +102,10 @@ All in the Settings window (October 2, 2026, unless stated):
   2026)
 - Images shown in the conversation. (October 2, 2026)
 - The pointing-hand cursor over links. (October 2, 2026)
+- Reactions: show them, with who added them, add and remove them, and see
+  changes from other people without a refresh. (October 12, 2026)
+- Emoji in messages, including emoticons such as :) that change to emoji.
+  (October 12, 2026; built on request October 14, 2026)
 
 
 ## Prompt delivery
@@ -208,6 +212,9 @@ one:
   when the directory is not available.
 - Edited and deleted messages change in an open conversation at once, when
   push delivery works. The events for them came with push delivery.
+- The setting "Change emoticons and short codes to emoji", which turns the
+  change off.
+- No notification for a reaction to the person's own message.
 - Two settings for updates: "Check for updates automatically" and
   "Download and install updates automatically".
 - The choice to open the release notes in an editor before a release is

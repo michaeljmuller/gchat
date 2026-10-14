@@ -9,6 +9,7 @@ public struct EventSubscription: Codable, Hashable, Sendable {
     public var state: String?
     public var expireTime: Date?
     public var targetResource: String?
+    public var eventTypes: [String]?
     public var notificationEndpoint: Endpoint?
 
     public struct Endpoint: Codable, Hashable, Sendable {
@@ -18,12 +19,19 @@ public struct EventSubscription: Codable, Hashable, Sendable {
     public var pubsubTopic: String? { notificationEndpoint?.pubsubTopic }
     public var isActive: Bool { state == "ACTIVE" }
     public var isSuspended: Bool { state == "SUSPENDED" }
+    /// False for a subscription made before GChat asked for more event types,
+    /// such as reactions. Event types cannot be changed, so it is replaced.
+    public var hasAllEventTypes: Bool {
+        guard let eventTypes else { return true }
+        return Set(WorkspaceEventsAPI.eventTypes).isSubset(of: eventTypes)
+    }
 
     public init(
         name: String, state: String? = nil, expireTime: Date? = nil, targetResource: String? = nil,
-        pubsubTopic: String? = nil
+        eventTypes: [String]? = nil, pubsubTopic: String? = nil
     ) {
         self.name = name
+        self.eventTypes = eventTypes
         self.state = state
         self.expireTime = expireTime
         self.targetResource = targetResource
@@ -51,7 +59,12 @@ public struct WorkspaceEventsAPI: EventSubscriptionService {
     public static let messageCreated = "google.workspace.chat.message.v1.created"
     public static let messageUpdated = "google.workspace.chat.message.v1.updated"
     public static let messageDeleted = "google.workspace.chat.message.v1.deleted"
-    static let eventTypes = [messageCreated, messageUpdated, messageDeleted]
+    public static let reactionCreated = "google.workspace.chat.reaction.v1.created"
+    public static let reactionDeleted = "google.workspace.chat.reaction.v1.deleted"
+    /// Google can combine several events of one type into one batch event.
+    public static let reactionBatchCreated = "google.workspace.chat.reaction.v1.batchCreated"
+    public static let reactionBatchDeleted = "google.workspace.chat.reaction.v1.batchDeleted"
+    static let eventTypes = [messageCreated, messageUpdated, messageDeleted, reactionCreated, reactionDeleted]
 
     private let client: APIClient
 

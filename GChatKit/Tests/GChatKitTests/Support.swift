@@ -83,6 +83,9 @@ final class FakeChat: ChatService, @unchecked Sendable {
         /// What a request for one conversation answers, where it differs from the list.
         var details: [String: Space] = [:]
         var detailCalls: [String] = []
+        /// By message name.
+        var reactions: [String: [Reaction]] = [:]
+        var reactionCalls: [String] = []
     }
 
     private let lock = NSLock()
@@ -166,10 +169,57 @@ final class FakeChat: ChatService, @unchecked Sendable {
         Data(resourceName.utf8)
     }
 
+    func listReactions(of message: String) async throws -> [Reaction] {
+        update { state in
+            state.reactionCalls.append("list \(message)")
+            return state.reactions[message] ?? []
+        }
+    }
+
+    func addReaction(_ emoji: Emoji, to message: String) async throws -> Reaction {
+        update { state in
+            state.reactionCalls.append("add \(emoji.label)")
+            let reaction = Reaction(
+                name: "\(message)/reactions/r\(state.reactionCalls.count)", user: User(name: "users/me-id"),
+                emoji: emoji)
+            state.reactions[message, default: []].append(reaction)
+            state.setReactionCount(of: message)
+            return reaction
+        }
+    }
+
+    func deleteReaction(_ name: String) async throws {
+        update { state in
+            state.reactionCalls.append("delete \(name)")
+            guard let message = Reaction.messageName(of: name) else { return }
+            state.reactions[message]?.removeAll { $0.name == name }
+            state.setReactionCount(of: message)
+        }
+    }
+
     func createGroupChat(with users: [String]) async throws -> Space {
         update { state in
             state.created.append(users.joined(separator: "+"))
             return Space(name: "spaces/new-\(state.created.count)", spaceType: "GROUP_CHAT")
+        }
+    }
+}
+
+extension FakeChat.State {
+    /// Makes the summaries of a message agree with its reactions, as Google does.
+    mutating func setReactionCount(of message: String) {
+        let reactions = self.reactions[message] ?? []
+        var summaries: [EmojiReactionSummary] = []
+        for reaction in reactions {
+            if let index = summaries.firstIndex(where: { $0.emoji.key == reaction.emoji.key }) {
+                summaries[index].reactionCount! += 1
+            } else {
+                summaries.append(EmojiReactionSummary(emoji: reaction.emoji, reactionCount: 1))
+            }
+        }
+        for space in messages.keys {
+            guard let index = messages[space]?.firstIndex(where: { $0.name == message }) else { continue }
+            messages[space]?[index].emojiReactionSummaries = summaries.isEmpty ? nil : summaries
         }
     }
 }
@@ -241,7 +291,8 @@ final class FakeEvents: EventSubscriptionService, @unchecked Sendable {
             }
             let subscription = EventSubscription(
                 name: "subscriptions/new-\(state.subscriptions.count + 1)", state: "ACTIVE",
-                expireTime: Date().addingTimeInterval(7 * 86400), pubsubTopic: topic)
+                expireTime: Date().addingTimeInterval(7 * 86400), eventTypes: WorkspaceEventsAPI.eventTypes,
+                pubsubTopic: topic)
             state.subscriptions[subscription.name] = subscription
             return subscription
         }

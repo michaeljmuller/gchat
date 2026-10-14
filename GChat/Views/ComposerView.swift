@@ -1,4 +1,5 @@
 import AppKit
+import GChatKit
 import SwiftUI
 
 struct ComposerView: View {
@@ -7,10 +8,23 @@ struct ComposerView: View {
     let onSend: () -> Void
 
     @State private var height: CGFloat = 30
+    /// Counts presses of the emoji button. The text view opens the picker on each change.
+    @State private var emojiRequests = 0
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            ComposerTextView(text: $text, height: $height, onSubmit: onSend)
+            Button {
+                emojiRequests += 1
+            } label: {
+                Image(systemName: "face.smiling")
+                    .font(.system(size: 18))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Emoji & Symbols (Control-Command-Space)")
+            .padding(.bottom, 6)
+
+            ComposerTextView(text: $text, height: $height, emojiRequests: emojiRequests, onSubmit: onSend)
                 .frame(height: height)
                 .overlay(alignment: .topLeading) {
                     if text.isEmpty {
@@ -48,9 +62,11 @@ struct ComposerView: View {
 
 /// A plain-text NSTextView that grows with its content.
 /// Return sends; Shift-Return and Option-Return insert a line break.
+/// Emoticons and short codes change to emoji as they are typed (EmojiShortcuts).
 struct ComposerTextView: NSViewRepresentable {
     @Binding var text: String
     @Binding var height: CGFloat
+    let emojiRequests: Int
     let onSubmit: () -> Void
 
     static let inset = NSSize(width: 4, height: 7)
@@ -86,6 +102,11 @@ struct ComposerTextView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.parent = self
         guard let textView = scrollView.documentView as? NSTextView else { return }
+        if emojiRequests != context.coordinator.emojiRequests {
+            context.coordinator.emojiRequests = emojiRequests
+            textView.window?.makeFirstResponder(textView)
+            NSApp.orderFrontCharacterPalette(textView)
+        }
         if textView.string != text {
             textView.string = text
             DispatchQueue.main.async { context.coordinator.updateHeight(of: textView) }
@@ -94,9 +115,40 @@ struct ComposerTextView: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: ComposerTextView
+        var emojiRequests: Int
 
         init(_ parent: ComposerTextView) {
             self.parent = parent
+            self.emojiRequests = parent.emojiRequests
+        }
+
+        func textView(
+            _ textView: NSTextView, shouldChangeTextIn range: NSRange, replacementString text: String?
+        ) -> Bool {
+            guard let text, text == " " || text == ":" else { return true }
+            return !replaceShortcut(in: textView, before: range, trigger: Character(text))
+        }
+
+        /// Changes the word before `range` to an emoji, followed by the
+        /// trigger unless it is the colon that ends a short code. True if it did.
+        @discardableResult
+        func replaceShortcut(in textView: NSTextView, before range: NSRange, trigger: Character?) -> Bool {
+            guard UserDefaults.standard.object(forKey: AppSettings.emoticonsKey) as? Bool ?? true,
+                  range.length == 0, !textView.hasMarkedText()
+            else { return false }
+            let string = textView.string as NSString
+            let space = string.rangeOfCharacter(
+                from: .whitespacesAndNewlines, options: .backwards, range: NSRange(location: 0, length: range.location))
+            let wordStart = space.location == NSNotFound ? 0 : space.location + space.length
+            let word = string.substring(with: NSRange(location: wordStart, length: range.location - wordStart))
+            guard !word.isEmpty, let emoji = EmojiShortcuts.replacement(for: word, trigger: trigger) else {
+                return false
+            }
+            let suffix = trigger.map { $0 == ":" ? "" : String($0) } ?? ""
+            // insertText goes through undo, so Command-Z brings the text back.
+            textView.insertText(
+                emoji + suffix, replacementRange: NSRange(location: wordStart, length: range.location - wordStart))
+            return true
         }
 
         func textDidChange(_ notification: Notification) {
@@ -107,6 +159,7 @@ struct ComposerTextView: NSViewRepresentable {
 
         func textView(_ textView: NSTextView, doCommandBy selector: Selector) -> Bool {
             guard selector == #selector(NSResponder.insertNewline(_:)) else { return false }
+            replaceShortcut(in: textView, before: textView.selectedRange(), trigger: nil)
             if NSApp.currentEvent?.modifierFlags.contains(.shift) == true {
                 textView.insertNewlineIgnoringFieldEditor(nil)
             } else {

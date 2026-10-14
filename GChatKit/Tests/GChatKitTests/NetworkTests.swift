@@ -188,6 +188,24 @@ import Testing
         #expect((body["eventTypes"] as? [String])?.contains("google.workspace.chat.message.v1.created") == true)
     }
 
+    @Test func addReactionSendsOnlyTheEmoji() async throws {
+        let requests = Recorder<(String, String, String)>()
+        StubProtocol.handler = { request in
+            requests.append((request.httpMethod ?? "", request.url!.absoluteString, request.bodyString))
+            return (200, #"{"name": "spaces/A/messages/B/reactions/R", "emoji": {"unicode": "🎉"}}"#)
+        }
+        let api = ChatAPI(client: APIClient(tokens: FixedToken(), session: StubProtocol.session()))
+        let custom = Emoji(customEmoji: .init(uid: "c1", emojiName: ":party-dog:"))
+        let reaction = try await api.addReaction(Emoji(unicode: "🎉"), to: "spaces/A/messages/B")
+        _ = try await api.addReaction(custom, to: "spaces/A/messages/B")
+
+        #expect(reaction.name == "spaces/A/messages/B/reactions/R")
+        #expect(requests.values.map(\.0) == ["POST", "POST"])
+        #expect(requests.values[0].1 == "https://chat.googleapis.com/v1/spaces/A/messages/B/reactions")
+        #expect(requests.values[0].2 == #"{"emoji":{"unicode":"🎉"}}"#)
+        #expect(requests.values[1].2 == #"{"emoji":{"customEmoji":{"uid":"c1"}}}"#)
+    }
+
     @Test func markReadPatchesReadState() async throws {
         let requests = Recorder<(String, String, String)>()
         StubProtocol.handler = { request in

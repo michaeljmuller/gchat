@@ -1,3 +1,4 @@
+import AppKit
 import GChatKit
 import SwiftUI
 
@@ -253,8 +254,12 @@ struct DaySeparator: View {
 struct MessageRowView: View {
     let store: ChatStore
     let row: TranscriptRow
+    @State private var isHovering = false
+    @State private var isPickingReaction = false
 
     private static let avatarSize: CGFloat = 32
+    /// How far the hover highlight reaches past the avatar and the text.
+    private static let highlightInset: CGFloat = 6
 
     var body: some View {
         let message = row.message
@@ -288,11 +293,59 @@ struct MessageRowView: View {
                         AttachmentChip(store: store, attachment: attachment)
                     }
                 }
+                let reactions = store.reactions(on: message)
+                if !reactions.isEmpty {
+                    ReactionBar(store: store, message: message, reactions: reactions) {
+                        isPickingReaction = true
+                    }
+                }
             }
             Spacer(minLength: 0)
         }
-        .padding(.top, row.showsHeader ? 10 : 3)
+        .padding(.vertical, 3)
+        .padding(.horizontal, Self.highlightInset)
         .help(message.createTime?.formatted(date: .abbreviated, time: .shortened) ?? "")
+        // The message that the reaction control belongs to is highlighted.
+        .background(
+            Color.primary.opacity(showsControl ? 0.06 : 0),
+            in: RoundedRectangle(cornerRadius: 6))
+        // The control stays inside the row. Where it stuck out, moving the
+        // pointer onto it left the row, which hid it, and it flickered.
+        .overlay(alignment: .topTrailing) {
+            if showsControl {
+                QuickReactions(store: store, message: message) { isPickingReaction = true }
+                    .popover(isPresented: $isPickingReaction, arrowEdge: .bottom) {
+                        ReactionPicker { emoji in
+                            isPickingReaction = false
+                            Task { await store.toggleReaction(emoji, on: message) }
+                        }
+                    }
+                    .padding(.top, QuickReactions.inset)
+                    .padding(.trailing, QuickReactions.inset)
+            }
+        }
+        .contentShape(Rectangle())
+        // After the overlay, so that the pointer over the control counts as over the message.
+        .onHover { isHovering = $0 }
+        .padding(.top, row.showsHeader ? 7 : 0)
+        .padding(.horizontal, -Self.highlightInset)
+        .contextMenu {
+            Menu("Add Reaction") {
+                ForEach(ReactionPicker.quick, id: \.self) { emoji in
+                    Button(emoji) { Task { await store.toggleReaction(Emoji(unicode: emoji), on: message) } }
+                }
+                Divider()
+                Button("More…") { isPickingReaction = true }
+            }
+        }
+        // Who reacted is not part of the message. Loaded again when the counts change.
+        .task(id: message.emojiReactionSummaries) { await store.loadReactions(on: message) }
+    }
+
+    private var showsControl: Bool {
+        // Not while GChat is in the background, so that a click that brings
+        // it to the front cannot react.
+        (isHovering && store.isAppActive) || isPickingReaction
     }
 
     private func rendered(_ message: Message) -> AttributedString {
@@ -330,5 +383,205 @@ struct PendingRowView: View {
             Spacer(minLength: 0)
         }
         .padding(.top, 6)
+    }
+}
+
+// MARK: - Reactions
+
+/// The reactions below a message. A click on one adds the same reaction, or
+/// removes the signed-in person's own.
+struct ReactionBar: View {
+    let store: ChatStore
+    let message: Message
+    let reactions: [ReactionGroup]
+    let onAdd: () -> Void
+    /// The reaction under the pointer.
+    @State private var hovered: String?
+    /// When GChat last came to the front.
+    @State private var activatedAt = Date.distantPast
+
+    /// A click that brings the window to the front must not add or remove a
+    /// reaction. That click comes within this time of the activation.
+    /// allowsWindowActivationEvents(false) did not stop it on these buttons,
+    /// and the appearsActive environment value did not change reliably.
+    private static let activationGrace: TimeInterval = 0.5
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(reactions) { reaction in
+                // Over the person's own reaction, a red X in place of the
+                // count shows that a click removes it.
+                // Not while the window is in the background, where a click
+                // only brings it to the front.
+                let removes = reaction.isMine && hovered == reaction.id && store.isAppActive
+                Button {
+                    guard Date().timeIntervalSince(activatedAt) > Self.activationGrace else { return }
+                    Task { await store.toggleReaction(reaction.emoji, on: message) }
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(reaction.emoji.label)
+                        // The count stays in the layout, so the chip keeps its width.
+                        Text(reaction.count, format: .number)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(reaction.isMine ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                            .opacity(removes ? 0 : 1)
+                            .overlay {
+                                if removes {
+                                    Image(systemName: "xmark")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(.red)
+                                }
+                            }
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(
+                        reaction.isMine ? AnyShapeStyle(.tint.opacity(0.15)) : AnyShapeStyle(.quaternary.opacity(0.5)),
+                        in: Capsule())
+                    .overlay {
+                        Capsule().strokeBorder(reaction.isMine ? AnyShapeStyle(.tint) : AnyShapeStyle(.separator))
+                    }
+                }
+                .buttonStyle(.plain)
+                .onHover { inside in
+                    if inside {
+                        hovered = reaction.id
+                    } else if hovered == reaction.id {
+                        hovered = nil
+                    }
+                }
+                .help(names(reaction))
+                .accessibilityLabel("\(reaction.emoji.label) \(reaction.count): \(names(reaction))")
+            }
+            Button {
+                guard Date().timeIntervalSince(activatedAt) > Self.activationGrace else { return }
+                onAdd()
+            } label: {
+                Image(systemName: "face.smiling")
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+            }
+            .buttonStyle(.plain)
+            .help("Add Reaction")
+        }
+        .arrowCursor()
+        .onChange(of: store.isAppActive) { _, isActive in
+            if isActive { activatedAt = Date() }
+        }
+        .padding(.top, 2)
+    }
+
+    private func names(_ reaction: ReactionGroup) -> String {
+        guard !reaction.users.isEmpty else { return "\(reaction.count) reacted" }
+        return reaction.users
+            .map { $0.name == store.me?.user ? "You" : store.name(for: $0) }
+            .formatted(.list(type: .and))
+    }
+}
+
+/// The control that shows while the pointer is over a message: common
+/// reactions, and a button for the rest.
+struct QuickReactions: View {
+    let store: ChatStore
+    let message: Message
+    let onMore: () -> Void
+
+    /// Fits inside the row of a one-line message, about 22 points tall, with
+    /// the same space above as at the side.
+    static let height: CGFloat = 18
+    static let inset: CGFloat = 2
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(ReactionPicker.quick.prefix(5), id: \.self) { emoji in
+                Button {
+                    Task { await store.toggleReaction(Emoji(unicode: emoji), on: message) }
+                } label: {
+                    Text(emoji)
+                        .font(.system(size: 12))
+                        .frame(width: 24, height: QuickReactions.height)
+                }
+                .buttonStyle(.plain)
+                .help("React with \(emoji)")
+            }
+            Divider().frame(height: 12)
+            Button(action: onMore) {
+                Image(systemName: "face.smiling")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24, height: QuickReactions.height)
+            }
+            .buttonStyle(.plain)
+            .help("More Reactions")
+        }
+        .padding(.horizontal, 3)
+        // Solid, so that it stands apart from the highlight of the message.
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+        .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(.separator) }
+        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+        .arrowCursor()
+    }
+}
+
+extension View {
+    /// Shows the arrow over a control. The message text is an NSTextView,
+    /// which sets the text cursor, and nothing in SwiftUI sets the arrow
+    /// again when the pointer leaves it. So the arrow is set on each move.
+    func arrowCursor() -> some View {
+        onContinuousHover { phase in
+            if case .active = phase { NSCursor.arrow.set() }
+        }
+    }
+}
+
+/// A grid of common emoji, and a field for any other, which takes the emoji
+/// picker of macOS.
+struct ReactionPicker: View {
+    let onPick: (Emoji) -> Void
+    @State private var other = ""
+    @FocusState private var isFieldFocused: Bool
+
+    static let quick = ["👍", "❤️", "😂", "🎉", "😮", "😢", "🙏", "👀"]
+    private static let more = [
+        "👎", "👏", "🙌", "💪", "👌", "✌️", "🤞", "👋",
+        "😀", "😄", "😁", "😅", "🤣", "😊", "😍", "😘",
+        "😎", "🤔", "🙄", "😐", "😕", "😬", "😱", "😭",
+        "😡", "🤯", "🥳", "😴", "🤷", "🤦", "🙈", "💀",
+        "🔥", "✨", "💯", "✅", "❌", "⚠️", "🚀", "💡",
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(30), spacing: 2), count: 8), spacing: 2) {
+                ForEach(Self.quick + Self.more, id: \.self) { emoji in
+                    Button {
+                        onPick(Emoji(unicode: emoji))
+                    } label: {
+                        Text(emoji).font(.title3).frame(width: 30, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            HStack {
+                TextField("Other emoji", text: $other)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($isFieldFocused)
+                    .onChange(of: other) { pick(from: other) }
+                    .onSubmit { pick(from: other) }
+                Button("All Emoji") {
+                    isFieldFocused = true
+                    DispatchQueue.main.async { NSApp.orderFrontCharacterPalette(nil) }
+                }
+                .help("Emoji & Symbols (Control-Command-Space)")
+            }
+        }
+        .padding(12)
+        .frame(width: 270)
+    }
+
+    private func pick(from text: String) {
+        guard let emoji = EmojiShortcuts.firstEmoji(in: text) else { return }
+        other = ""
+        onPick(Emoji(unicode: emoji))
     }
 }

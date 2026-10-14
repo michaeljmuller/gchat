@@ -78,6 +78,21 @@ requests behind each feature are in requirements.md.
   Look.
 - The context menu of an image or a chip has Open and Save As.
 - Files from Google Drive appear as a chip that opens in the browser.
+- Reactions show below a message: each emoji with its count. The ones that
+  the signed-in person added have an accent color. Pointing at a reaction
+  shows the names of the people who added it. A custom emoji of the
+  organization shows as its name, for example :party-dog:, not as an image.
+- A click on a reaction adds the same reaction, or removes the person's own.
+  Over the person's own reaction, a red X shows in place of the count.
+- Pointing at a message highlights it and shows a control at its top right
+  with five common reactions and a button for more. The control acts on the
+  highlighted message. The context menu of a message has Add
+  Reaction with the same choices. More opens a panel with 48 emoji and a
+  field that takes any emoji, typed or from the emoji picker of macOS (All
+  Emoji, or Control-Command-Space).
+- When GChat is in the background, the control does not show, and a click
+  on a reaction only brings GChat to the front.
+- Reactions do not make notifications.
 - Older messages load when the transcript is scrolled to the top, or with
   Load Earlier Messages.
 - When a message arrives and the end of the transcript is in view, the
@@ -94,6 +109,14 @@ requests behind each feature are in requirements.md.
 ## Sending
 
 - Return sends. Shift-Return or Option-Return adds a line break.
+- The smiley button left of the message field opens the emoji picker of
+  macOS. Control-Command-Space and Edit > Emoji & Symbols do the same.
+- Emoticons change to emoji when a space, a line break or Return follows
+  them: :) to 🙂, :( to 🙁, :D to 😀, ;) to 😉, :P to 😛, <3 to ❤️ and
+  about 20 more. Short codes change when the closing colon is typed:
+  :thumbsup: to 👍, :tada: to 🎉 and about 120 more. The full lists are in
+  GChatKit/Sources/GChatKit/Markup/EmojiShortcuts.swift. A setting turns
+  this off.
 - A message shows in gray until Google accepts it. If sending fails, the
   message shows the reason, Try Again and Delete.
 
@@ -120,14 +143,15 @@ requests behind each feature are in requirements.md.
 - In a build with a relay, signed in to the organization of the build, new
   messages arrive within about a second, in every conversation.
 - Messages that someone edits or deletes change in an open conversation at
-  once.
+  once. Reactions that someone adds or removes do too.
 - Without a relay, or when the relay cannot be reached, GChat polls. It
   checks all conversations together. After a message was sent or received,
   it checks every 2 seconds. Each check that finds nothing makes the wait a
   tenth longer: 30 seconds after about 5 minutes, and at most 10 minutes,
   after about 100 minutes. Refresh (Command-R) checks at once and starts
   the waits again from 2 seconds. Edits and deletions show at the next
-  launch.
+  launch. Reactions on the 50 newest messages of the open conversation
+  update once a minute while GChat is in front.
 - The polling rate is the same whether GChat is in front or not.
 
 
@@ -161,6 +185,10 @@ General:
   an updater (next section).
 - Download and install updates automatically. Off by default. Locked when
   the setting above is off.
+
+Messages:
+
+- Change emoticons and short codes to emoji. On by default.
 
 Sidebar:
 

@@ -95,6 +95,26 @@ import Testing
         #expect(message.mentionNames.isEmpty)
     }
 
+    @Test func decodesReactionSummaries() throws {
+        let json = """
+        {"name": "spaces/AAA/messages/m1",
+         "emojiReactionSummaries": [
+           {"emoji": {"unicode": "👍"}, "reactionCount": 2},
+           {"emoji": {"customEmoji": {"uid": "c1", "emojiName": ":party-dog:"}}, "reactionCount": 1},
+           {"emoji": "not an object"}]}
+        """
+        let message = try RFC3339.makeDecoder().decode(Message.self, from: Data(json.utf8))
+        let summaries = try #require(message.emojiReactionSummaries)
+        #expect(summaries.map(\.emoji.label) == ["👍", ":party-dog:"])
+        #expect(summaries.map(\.reactionCount) == [2, 1])
+        #expect(summaries[1].emoji.key == "c:c1")
+    }
+
+    @Test func reactionNamesLeadToTheirMessage() {
+        #expect(Reaction.messageName(of: "spaces/A/messages/B.C/reactions/R") == "spaces/A/messages/B.C")
+        #expect(Reaction.messageName(of: "spaces/A/messages/B") == nil)
+    }
+
     @Test func lossyElementKeepsTheRestOfTheArray() throws {
         let json = """
         [{"name": "spaces/AAA/messages/m1"}, {"text": "no name"}, {"name": "spaces/AAA/messages/m3"}]
@@ -187,5 +207,29 @@ import Testing
         #expect(!UnreadRule.isUnread(lastActive: now, lastRead: now))
         #expect(!UnreadRule.isUnread(lastActive: now, lastRead: nil))
         #expect(!UnreadRule.isUnread(lastActive: nil, lastRead: now))
+    }
+}
+
+@Suite struct EmojiShortcutTests {
+    @Test func emoticonsChangeWhenTheWordEnds() {
+        #expect(EmojiShortcuts.replacement(for: ":)", trigger: " ") == "🙂")
+        #expect(EmojiShortcuts.replacement(for: "<3", trigger: nil) == "❤️")
+        #expect(EmojiShortcuts.replacement(for: "x:)", trigger: " ") == nil)
+        #expect(EmojiShortcuts.replacement(for: "http://", trigger: " ") == nil)
+    }
+
+    @Test func shortCodesChangeOnTheClosingColon() {
+        #expect(EmojiShortcuts.replacement(for: ":thumbsup", trigger: ":") == "👍")
+        #expect(EmojiShortcuts.replacement(for: ":thumbsup:", trigger: " ") == "👍")
+        #expect(EmojiShortcuts.replacement(for: ":nothing", trigger: ":") == nil)
+        #expect(EmojiShortcuts.replacement(for: ":", trigger: ":") == nil)
+        // A time is not a short code.
+        #expect(EmojiShortcuts.replacement(for: "10:30", trigger: ":") == nil)
+    }
+
+    @Test func findsTheFirstEmoji() {
+        #expect(EmojiShortcuts.firstEmoji(in: "a 👍🏽 b") == "👍🏽")
+        #expect(EmojiShortcuts.firstEmoji(in: "❤️") == "❤️")
+        #expect(EmojiShortcuts.firstEmoji(in: "123 #") == nil)
     }
 }

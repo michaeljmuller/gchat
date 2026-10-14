@@ -49,7 +49,9 @@ struct MessageTextView: NSViewRepresentable {
         textView.textStorage?.setAttributedString(NSAttributedString(chatText: text))
     }
 
-    /// The height the text needs at the width SwiftUI offers.
+    /// The height the text needs at the width SwiftUI offers, and only the
+    /// width the text uses. A wider view would lie under the reaction control
+    /// and show the text cursor over it.
     func sizeThatFits(_ proposal: ProposedViewSize, nsView textView: NSTextView, context: Context) -> CGSize? {
         guard let layoutManager = textView.layoutManager, let container = textView.textContainer else {
             return nil
@@ -58,7 +60,7 @@ struct MessageTextView: NSViewRepresentable {
         container.containerSize = NSSize(width: width, height: .greatestFiniteMagnitude)
         layoutManager.ensureLayout(for: container)
         let used = layoutManager.usedRect(for: container)
-        return CGSize(width: proposal.width == nil ? ceil(used.width) : width, height: ceil(used.height))
+        return CGSize(width: min(ceil(used.width), width), height: ceil(used.height))
     }
 
     final class Coordinator {

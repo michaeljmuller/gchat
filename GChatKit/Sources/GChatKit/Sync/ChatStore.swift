@@ -21,6 +21,18 @@ public struct Transcript: Sendable {
     public init() {}
 }
 
+/// The people who reacted to a message with one emoji.
+public struct ReactionGroup: Identifiable, Hashable, Sendable {
+    public var emoji: Emoji
+    public var count: Int
+    /// True when the signed-in person is one of them. False while that is not known yet.
+    public var isMine: Bool
+    /// Empty until the reactions of the message are loaded.
+    public var users: [User]
+
+    public var id: String { emoji.key }
+}
+
 public enum UnreadRule {
     /// A conversation is unread when its last message is newer than the read marker.
     public static func isUnread(lastActive: Date?, lastRead: Date?) -> Bool {
@@ -81,6 +93,9 @@ public final class ChatStore {
     @ObservationIgnored public var onAuthFailure: (() -> Void)?
 
     private var transcripts: [String: Transcript] = [:]
+    /// Who reacted to each message, by message name. A message has counts
+    /// only, so this is loaded when a message with reactions shows.
+    private var reactionDetails: [String: [Reaction]] = [:]
     private var readTimes: [String: Date] = [:]
     private var titles: [String: String]
     /// Direct message space -> the other person's user resource name.
@@ -102,6 +117,8 @@ public final class ChatStore {
     @ObservationIgnored private var typeAttempts: Set<String> = []
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var lastSafetyPoll = Date.distantPast
+    @ObservationIgnored private var lastReactionCheck = Date.distantPast
+    @ObservationIgnored private var reactionRequests: Set<String> = []
     /// When a message was last sent or received.
     @ObservationIgnored private var lastActivity = Date.distantPast
     /// Names of messages that were already added, notified or marked read.
@@ -303,6 +320,9 @@ public final class ChatStore {
             try? await Task.sleep(for: .milliseconds(500))
             if Task.isCancelled { break }
             guard isOnline, !isPaused else { continue }
+            if !isPushConnected, Date().timeIntervalSince(lastReactionCheck) >= Self.safetyInterval {
+                await refreshRecentReactions()
+            }
             if isPushConnected, phase == .ready {
                 // Notices arrive through the relay. Poll now and then anyway,
                 // in case one was lost.
@@ -347,6 +367,7 @@ public final class ChatStore {
         lastSafetyPoll = Date()
         await refreshSpaces()
         await pollSelection()
+        await refreshRecentReactions()
     }
 
     /// Acts on a notice from the relay. A notice holds identifiers only, so
@@ -370,14 +391,20 @@ public final class ChatStore {
                 await ingest(in: space, since: space.lastActiveTime, changed: true)
             }
         case WorkspaceEventsAPI.messageUpdated:
-            guard let resource, transcripts[name]?.isLoaded == true,
-                  let message = try? await chat.getMessage(resource),
-                  let index = transcripts[name]?.messages.firstIndex(where: { $0.name == resource })
-            else { return }
-            transcripts[name]?.messages[index] = message
+            guard let resource else { return }
+            await reload(message: resource)
         case WorkspaceEventsAPI.messageDeleted:
             guard let resource else { return }
             transcripts[name]?.messages.removeAll { $0.name == resource }
+        case WorkspaceEventsAPI.reactionCreated, WorkspaceEventsAPI.reactionDeleted,
+             WorkspaceEventsAPI.reactionBatchCreated, WorkspaceEventsAPI.reactionBatchDeleted:
+            // No notification: Google Chat does not notify about reactions either.
+            if let resource, let message = Reaction.messageName(of: resource) {
+                await reload(message: message)
+            } else {
+                // A batch event names no single reaction.
+                await refreshRecentReactions(in: Self.spaceName(of: name))
+            }
         default:
             break
         }
@@ -795,6 +822,135 @@ public final class ChatStore {
             let fromOthers = fresh.filter { !isMine($0) }
             if !fromOthers.isEmpty { onIncoming?(space, fromOthers) }
             await refreshReadState(name)
+        }
+    }
+
+    /// Reads one message of a loaded transcript again, for an edit or a
+    /// change of its reactions.
+    private func reload(message messageName: String) async {
+        let space = Self.spaceName(of: messageName)
+        guard transcripts[space]?.messages.contains(where: { $0.name == messageName }) == true,
+              let message = try? await chat.getMessage(messageName)
+        else { return }
+        replace(message, in: space)
+    }
+
+    private func replace(_ message: Message, in space: String) {
+        guard let index = transcripts[space]?.messages.firstIndex(where: { $0.name == message.name }),
+              transcripts[space]?.messages[index] != message
+        else { return }
+        transcripts[space]?.messages[index] = message
+    }
+
+    /// "spaces/A" for "spaces/A/messages/B" and the like.
+    static func spaceName(of resource: String) -> String {
+        resource.split(separator: "/").prefix(2).joined(separator: "/")
+    }
+
+    // MARK: - Reactions
+
+    public func reactions(on message: Message) -> [ReactionGroup] {
+        let details = reactionDetails[message.name] ?? []
+        return (message.emojiReactionSummaries ?? []).compactMap { summary in
+            let count = summary.reactionCount ?? 0
+            guard count > 0 else { return nil }
+            let users = details.filter { $0.emoji.key == summary.emoji.key }.compactMap(\.user)
+            return ReactionGroup(
+                emoji: summary.emoji, count: count,
+                isMine: users.contains { $0.name == me?.user }, users: users)
+        }
+    }
+
+    /// Loads who reacted to a message, unless that is already known for its
+    /// current counts. Called when a message with reactions shows.
+    public func loadReactions(on message: Message) async {
+        guard message.emojiReactionSummaries?.isEmpty == false, !reactionDetailsMatch(message), !isPaused,
+              reactionRequests.insert(message.name).inserted
+        else { return }
+        defer { reactionRequests.remove(message.name) }
+        do {
+            let reactions = try await chat.listReactions(of: message.name)
+            reactionDetails[message.name] = reactions
+            for user in Set(reactions.compactMap(\.user)) where !user.isBot {
+                if let name = user.displayName { noteName(name, for: user.name) }
+                requestProfile(user.name)
+            }
+        } catch {
+            if (error as? APIError)?.status == 429 { report(error) }
+            Self.log.error("Reactions of \(message.name, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    private func reactionDetailsMatch(_ message: Message) -> Bool {
+        guard let details = reactionDetails[message.name] else { return false }
+        let loaded = Dictionary(grouping: details, by: \.emoji.key).mapValues(\.count)
+        let expected = Dictionary(
+            (message.emojiReactionSummaries ?? []).map { ($0.emoji.key, $0.reactionCount ?? 0) },
+            uniquingKeysWith: +
+        ).filter { $0.value > 0 }
+        return loaded == expected
+    }
+
+    /// Adds the signed-in person's reaction, or removes it when it is there.
+    public func toggleReaction(_ emoji: Emoji, on message: Message) async {
+        guard let me else { return }
+        if !reactionDetailsMatch(message) { await loadReactions(on: message) }
+        let mine = reactionDetails[message.name]?.first {
+            $0.emoji.key == emoji.key && $0.user?.name == me.user
+        }
+        do {
+            if let mine, let name = mine.name {
+                try await chat.deleteReaction(name)
+                reactionDetails[message.name]?.removeAll { $0.name == name }
+                adjustReactionCount(of: message.name, emoji: emoji, by: -1)
+            } else {
+                var reaction = try await chat.addReaction(emoji, to: message.name)
+                if reaction.user == nil { reaction.user = User(name: me.user, type: "HUMAN") }
+                reactionDetails[message.name, default: []].append(reaction)
+                adjustReactionCount(of: message.name, emoji: emoji, by: 1)
+            }
+        } catch {
+            report(error)
+            if (error as? APIError)?.status != 409 {
+                alertMessage = "Could not change the reaction: \(error.localizedDescription)"
+            }
+            // Show what Google has.
+            reactionDetails[message.name] = nil
+            await reload(message: message.name)
+        }
+    }
+
+    /// Changes the count shown for an emoji right away. The next read of the
+    /// message brings the count from Google.
+    private func adjustReactionCount(of messageName: String, emoji: Emoji, by change: Int) {
+        let space = Self.spaceName(of: messageName)
+        guard let index = transcripts[space]?.messages.firstIndex(where: { $0.name == messageName }) else { return }
+        var summaries = transcripts[space]?.messages[index].emojiReactionSummaries ?? []
+        if let existing = summaries.firstIndex(where: { $0.emoji.key == emoji.key }) {
+            summaries[existing].reactionCount = (summaries[existing].reactionCount ?? 0) + change
+        } else if change > 0 {
+            summaries.append(EmojiReactionSummary(emoji: emoji, reactionCount: change))
+        }
+        summaries.removeAll { ($0.reactionCount ?? 0) <= 0 }
+        transcripts[space]?.messages[index].emojiReactionSummaries = summaries.isEmpty ? nil : summaries
+    }
+
+    /// Reads the newest messages of a conversation again, for reactions that
+    /// changed. A reaction does not change the time of last activity, so the
+    /// conversation list does not show it. Without a name, the conversation
+    /// in front, at most once a minute.
+    private func refreshRecentReactions(in name: String? = nil) async {
+        let target = name ?? selection
+        guard let target, transcripts[target]?.isLoaded == true, !isPaused else { return }
+        if name == nil {
+            guard isViewing(target) else { return }
+            lastReactionCheck = Date()
+        }
+        do {
+            let page = try await chat.listMessages(in: target, pageSize: Self.pageSize, pageToken: nil, after: nil)
+            for message in page.messages { replace(message, in: target) }
+        } catch {
+            if (error as? APIError)?.status == 429 { report(error) }
         }
     }
 

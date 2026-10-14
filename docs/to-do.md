@@ -59,7 +59,45 @@ out:
 - Animated GIFs show only their first frame. Quick Look plays them.
 - "Open with Preview" in Quick Look appears to put a copy in the Documents
   folder. Not verified yet.
-- Sending images (upload).
+
+
+## Sending images and files
+
+Requested by the owner on October 12, 2026, for images. Not started.
+
+GChat shows images and files that other people sent (behavior.md), but
+cannot send them (install.md).
+
+Images and other files use the same upload call of the Chat API. GChat
+uploads the file to the conversation, and then sends a message that refers
+to the upload. So the work for images covers most of the work for other
+files. What differs is in the window:
+
+- Both: the upload, progress and Cancel, an error when the upload fails,
+  a message with text and an attachment together, and more than one
+  attachment in a message.
+- Images only: paste from the clipboard, for example a screenshot, and a
+  small picture of the image in the composer before it is sent.
+- Other files: a row with the name and the size in the composer.
+- Both, with little extra work when one exists: a file dialog, and drag
+  and drop on the window.
+
+Decide:
+
+- Images only first, or all files from the start.
+- Whether GChat makes large images smaller before the upload.
+
+Other items that need this: "Send to the developer" in Problem reports,
+below.
+
+Not verified yet:
+
+- That the scope chat.messages, which GChat has, allows the upload. A new
+  scope makes each person sign in again.
+- The size limit, probably 200 MB, and which file types Google refuses.
+- Which quota an upload uses (Quota, below).
+- That the sandbox lets GChat read a file that was dropped or pasted. A
+  file from the file dialog is allowed.
 
 
 ## Quick Look opens empty
@@ -135,8 +173,9 @@ A rename is not a rewrite, but it changes many names at once:
 A rename is cheapest before colleagues install the app. After that, each
 installed copy loses its sign-in at the update.
 
-A smaller step, if the name stays: say in the app and in install.md that
-GChat is not a Google product. install.md and the README already say so.
+A smaller step, if the name stays: say in the app that GChat is not a
+Google product. install.md and the README say so. The About window does
+not.
 
 
 ## A designed icon
@@ -219,7 +258,7 @@ Decide also:
   state.
 - Shortcuts, if any.
 - Whether GChat has a View menu today, and what else belongs in it (Mac
-  conventions, below).
+  conventions, above).
 
 Work:
 
@@ -228,6 +267,43 @@ Work:
   the sidebar needs no change.
 - The menu items go in AppCommands (GChat/GChatApp.swift).
 - behavior.md lists the settings and the menus. Change both.
+
+
+## Reactions: what is left
+
+Requested by the owner on October 12, 2026. Built on October 14, 2026:
+showing, adding and removing reactions, names on hover, and live updates
+(design.md, "Reactions"). Left:
+
+- Try it against Google, with push delivery and without. design.md lists
+  what is not verified yet.
+- Custom emoji of the organization show as their name. Showing the image
+  needs the customEmojis API and a new scope, so everyone signs in again.
+  Adding a custom emoji that is not on the message yet needs a picker for
+  them.
+- Reactions on messages older than the 50 newest change only when the
+  message shows again after a launch, while GChat polls.
+
+
+## Emoji in message text: what is left
+
+Requested by the owner on October 12, 2026. Built on October 14, 2026: the
+emoji button in the composer, emoticons and short codes that change to
+emoji, and a setting that turns that off (behavior.md, "Sending"). Left:
+
+- Try standard emoji in both directions, including the ones made of several
+  characters: skin tones, flags and families.
+- A message that is only emoji shows larger, as in Google Chat and
+  Messages.
+- Short codes show suggestions while they are typed, as in Google Chat.
+  Today only a complete short code from the list changes.
+- Custom emoji of the organization, in received and sent text. Annotation
+  in GChatKit/Sources/GChatKit/API/Models.swift reads only mentions of
+  people.
+- Not verified yet: that positions in the text stay correct with emoji.
+  Google gives the start and the length of a mention as numbers. If GChat
+  and Google count an emoji differently, a mention after an emoji is
+  marked in the wrong place.
 
 
 ## All of a conversation's history
@@ -297,12 +373,6 @@ Then decide and build:
 
 ## Distribution to colleagues: what is left
 
-Done: the Developer ID certificate, the built-in client ID, backoff on 429,
-the release script, and install.md. A first disk image was notarized on
-October 2, 2026.
-
-Left:
-
 - How colleagues learn about GChat and get the first disk image. Releases
   are in the bucket, and installed copies update themselves (release.md).
 - A period of real use before the first distribution (release.md).
@@ -313,45 +383,8 @@ Left:
 
 ## Quota
 
-Google's limits, read in October 2026 at
-https://developers.google.com/workspace/chat/limits:
-
-    For each Cloud project, each minute:
-      message reads         3000
-      space reads           3000
-      membership reads      3000
-      message writes        3000
-      space writes            60   (new conversations)
-    For each space, each second, shared by all apps:
-      reads                   15
-      writes                   1
-
-Over a limit, Google answers 429. A higher limit for a project can be
-requested, but Google does not guarantee it.
-
-These numbers are for a copy that polls. A copy with push delivery polls
-once a minute. One polling copy of GChat uses about:
-
-- During a conversation: 30 space reads a minute, and one message read for
-  each conversation that changed.
-- After 5 minutes without a message: 2 space reads a minute, and fewer as
-  the wait grows to 10 minutes.
-- At the first launch: one membership read for each direct message and group
-  chat, about 200 for an account with 200 conversations, at about 10 a
-  second.
-
-The limits allow about 100 polling copies in active conversations at the
-same time. Zia Consulting has about 30 active employees, and their copies
-use push delivery, so the limits are far away. The risks are a relay
-failure during a busy time, and many first launches in the same minute.
-
-Done: backoff on 429 and a limit of about 10 requests a second at startup
-(design.md).
-
-Done: push delivery, and polling that slows after 10 minutes without a
-message (design.md).
-
-Left:
+The limits of Google and what one copy of GChat uses are in design.md,
+"Requests and quotas". Left:
 
 - No polling when the screen is locked.
 - Not verified yet: which quota the calls for read markers use. The quota
@@ -388,9 +421,8 @@ group chat. It also reads the read marker of each conversation with activity
 in the last 90 days. See
 resolveTitles() and loadReadStates() in ChatStore.swift.
 
-Done: about 10 requests a second, and a pause on 429.
-
-Left:
+GChat makes about 10 requests a second, and pauses on 429 (design.md,
+"Requests and quotas"). Left:
 
 - The conversations on screen first, then the rest.
 - Members read only when a conversation first shows, not for the whole list.
@@ -421,8 +453,6 @@ Left:
 
 - The first published release, and the test of an update from end to end
   (release.md).
-- Copies that colleagues installed before October 8, 2026 have no updater.
-  Each needs one more installation by hand.
 - Old disk images stay in the bucket. Nothing deletes them.
 - Other Mac apps can use the same layout, one folder for each app.
   scripts/support/publish.sh is written for GChat. A shared script needs its own

@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.hideUnnamedAppsKey) private var hideUnnamedApps = true
     @AppStorage(AppSettings.hideAppsKey) private var hideApps = false
     @AppStorage(AppSettings.quitOnCloseKey) private var quitOnClose = false
+    @AppStorage(AppSettings.emoticonsKey) private var replaceEmoticons = true
     @AppStorage(AppSettings.showDatesKey) private var showDates = true
     @AppStorage(AppSettings.sidebarSortKey) private var sidebarSort = SidebarSort.recent
 
@@ -58,6 +59,17 @@ struct SettingsView: View {
                     Toggle("Download and install updates automatically", isOn: $updater.downloadsAutomatically)
                         .disabled(!updater.checksAutomatically)
                 }
+            }
+
+            Section {
+                Toggle("Change emoticons and short codes to emoji", isOn: $replaceEmoticons)
+            } header: {
+                Text("Messages")
+            } footer: {
+                Text("For example :) to 🙂 and :thumbsup: to 👍, as you type.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             Section("Sidebar") {

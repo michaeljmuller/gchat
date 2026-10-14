@@ -284,6 +284,61 @@ import Testing
         #expect(store.transcript(for: "spaces/team").messages.isEmpty)
     }
 
+    @Test func reactionsShowWhoReactedAndToggle() async throws {
+        let store = await makeStore()
+        store.selection = "spaces/team"
+        let thumbs = Emoji(unicode: "👍")
+        chat.update { state in
+            state.reactions["spaces/team/messages/t1"] = [
+                Reaction(name: "spaces/team/messages/t1/reactions/ann", user: User(name: "users/ann"), emoji: thumbs),
+            ]
+            state.setReactionCount(of: "spaces/team/messages/t1")
+        }
+        await store.open("spaces/team")
+        var message = try #require(store.transcript(for: "spaces/team").messages.first)
+        #expect(store.reactions(on: message).map(\.count) == [1])
+        #expect(store.reactions(on: message).first?.users.isEmpty == true)
+
+        await store.loadReactions(on: message)
+        #expect(store.reactions(on: message).first?.users.map(\.name) == ["users/ann"])
+        #expect(store.reactions(on: message).first?.isMine == false)
+        // Known for these counts: no second request.
+        await store.loadReactions(on: message)
+        #expect(chat.update { $0.reactionCalls } == ["list spaces/team/messages/t1"])
+
+        await store.toggleReaction(thumbs, on: message)
+        message = try #require(store.transcript(for: "spaces/team").messages.first)
+        #expect(store.reactions(on: message).first?.count == 2)
+        #expect(store.reactions(on: message).first?.isMine == true)
+
+        await store.toggleReaction(thumbs, on: message)
+        message = try #require(store.transcript(for: "spaces/team").messages.first)
+        #expect(store.reactions(on: message).first?.count == 1)
+        #expect(store.reactions(on: message).first?.isMine == false)
+        #expect(chat.update { $0.reactions["spaces/team/messages/t1"]?.count } == 1)
+    }
+
+    @Test func aReactionNoticeReloadsItsMessage() async throws {
+        let store = await makeStore()
+        store.selection = "spaces/team"
+        await store.open("spaces/team")
+        var reported = 0
+        store.onIncoming = { _, _ in reported += 1 }
+        chat.update { state in
+            state.reactions["spaces/team/messages/t1"] = [
+                Reaction(name: "spaces/team/messages/t1/reactions/ann", user: User(name: "users/ann"),
+                         emoji: Emoji(unicode: "🎉")),
+            ]
+            state.setReactionCount(of: "spaces/team/messages/t1")
+        }
+        await store.handlePush(
+            type: WorkspaceEventsAPI.reactionCreated,
+            subject: "//chat.googleapis.com/spaces/team", resource: "spaces/team/messages/t1/reactions/ann")
+        let message = try #require(store.transcript(for: "spaces/team").messages.first)
+        #expect(store.reactions(on: message).map(\.emoji.label) == ["🎉"])
+        #expect(reported == 0)
+    }
+
     @Test func aPushNoticeForAnUnknownConversationRefreshesTheList() async throws {
         let store = await makeStore()
         chat.update { state in

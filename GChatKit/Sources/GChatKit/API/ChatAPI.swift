@@ -23,6 +23,12 @@ public protocol ChatService: Sendable {
     func createGroupChat(with users: [String]) async throws -> Space
     /// The contents of a file uploaded to Chat, by its attachment data reference.
     func downloadAttachment(_ resourceName: String) async throws -> Data
+    /// The reactions to a message ("spaces/A/messages/B"), with the people who added them.
+    func listReactions(of message: String) async throws -> [Reaction]
+    /// Adds the signed-in person's reaction. Google answers 409 when it is there already.
+    func addReaction(_ emoji: Emoji, to message: String) async throws -> Reaction
+    /// Deletes a reaction by its resource name, "spaces/A/messages/B/reactions/C".
+    func deleteReaction(_ name: String) async throws
 }
 
 public struct ChatAPI: ChatService {
@@ -161,6 +167,34 @@ public struct ChatAPI: ChatService {
 
     public func downloadAttachment(_ resourceName: String) async throws -> Data {
         try await client.data("GET", url("media/\(resourceName)", [URLQueryItem(name: "alt", value: "media")]))
+    }
+
+    public func listReactions(of message: String) async throws -> [Reaction] {
+        struct Page: Decodable {
+            var reactions: [Lossy<Reaction>]?
+            var nextPageToken: String?
+        }
+        var reactions: [Reaction] = []
+        var token: String?
+        var pages = 0
+        repeat {
+            var query = [URLQueryItem(name: "pageSize", value: "200")]
+            if let token { query.append(URLQueryItem(name: "pageToken", value: token)) }
+            let page: Page = try await client.send("GET", url("\(message)/reactions", query))
+            reactions += (page.reactions ?? []).compactMap(\.value)
+            token = page.nextPageToken
+            pages += 1
+        } while token?.isEmpty == false && pages < 5
+        return reactions
+    }
+
+    public func addReaction(_ emoji: Emoji, to message: String) async throws -> Reaction {
+        let body = try JSONEncoder().encode(["emoji": emoji.requestBody])
+        return try await client.send("POST", url("\(message)/reactions"), body: body)
+    }
+
+    public func deleteReaction(_ name: String) async throws {
+        _ = try await client.data("DELETE", url(name))
     }
 
     public func readState(for space: String) async throws -> SpaceReadState {

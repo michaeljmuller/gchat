@@ -172,8 +172,9 @@ in one Workspace organization, an announcement in a Chat space is enough.
 
 Do not give everybody the app in the same few minutes. Each first launch
 reads the member list of every conversation, and many first launches
-together can exceed the quota of the Cloud project (to-do.md). Updates do
-not have this problem: an update keeps what the copy stored.
+together can exceed the quota of the Cloud project (design.md, "Requests
+and quotas"). Updates do not have this problem: an update keeps what the
+copy stored.
 
 
 ## Before the first distribution

@@ -38,3 +38,11 @@ def test_unknown_payload_gives_no_resource():
 def test_ignores_messages_that_are_not_workspace_events():
     assert events.parse(message({"ce-source": "//other.googleapis.com/x"})) is None
     assert events.parse({"data": None}) is None
+
+
+def test_parses_a_reaction_event():
+    attributes = ATTRIBUTES | {"ce-type": "google.workspace.chat.reaction.v1.created"}
+    payload = {"reaction": {"name": "spaces/AAAA/messages/BBBB/reactions/CCCC"}}
+    _, notice = events.parse(message(attributes, payload))
+    assert notice.type == "google.workspace.chat.reaction.v1.created"
+    assert notice.resource == "spaces/AAAA/messages/BBBB/reactions/CCCC"

@@ -101,6 +101,79 @@ public struct Annotation: Codable, Hashable, Sendable {
     public var userMention: UserMention?
 }
 
+/// A standard emoji, which is a character, or a custom emoji of the
+/// organization, which is an image.
+public struct Emoji: Codable, Hashable, Sendable {
+    public struct CustomEmoji: Codable, Hashable, Sendable {
+        public var uid: String?
+        /// For example ":fire-dog:".
+        public var emojiName: String?
+
+        public init(uid: String?, emojiName: String? = nil) {
+            self.uid = uid
+            self.emojiName = emojiName
+        }
+    }
+
+    public var unicode: String?
+    public var customEmoji: CustomEmoji?
+
+    public init(unicode: String) {
+        self.unicode = unicode
+    }
+
+    public init(customEmoji: CustomEmoji) {
+        self.customEmoji = customEmoji
+    }
+
+    /// What the reaction shows: the character, or the name of a custom emoji.
+    public var label: String {
+        unicode ?? customEmoji?.emojiName ?? ":custom:"
+    }
+
+    /// Identifies the emoji regardless of the fields that only describe it.
+    public var key: String {
+        if let unicode { return "u:\(unicode)" }
+        return "c:\(customEmoji?.uid ?? customEmoji?.emojiName ?? "")"
+    }
+
+    /// The body of a request: the identifying field only.
+    var requestBody: Emoji {
+        if let unicode { return Emoji(unicode: unicode) }
+        return Emoji(customEmoji: CustomEmoji(uid: customEmoji?.uid))
+    }
+}
+
+public struct EmojiReactionSummary: Codable, Hashable, Sendable {
+    public var emoji: Emoji
+    public var reactionCount: Int?
+
+    public init(emoji: Emoji, reactionCount: Int?) {
+        self.emoji = emoji
+        self.reactionCount = reactionCount
+    }
+}
+
+/// One person's reaction to a message.
+public struct Reaction: Codable, Hashable, Sendable {
+    /// Resource name, for example "spaces/A/messages/B/reactions/C".
+    public var name: String?
+    public var user: User?
+    public var emoji: Emoji
+
+    public init(name: String?, user: User?, emoji: Emoji) {
+        self.name = name
+        self.user = user
+        self.emoji = emoji
+    }
+
+    /// The message that a reaction resource name belongs to.
+    public static func messageName(of reaction: String) -> String? {
+        guard let range = reaction.range(of: "/reactions/") else { return nil }
+        return String(reaction[..<range.lowerBound])
+    }
+}
+
 public struct Message: Codable, Identifiable, Hashable, Sendable {
     public struct ThreadRef: Codable, Hashable, Sendable {
         public var name: String?
@@ -116,6 +189,8 @@ public struct Message: Codable, Identifiable, Hashable, Sendable {
     public var threadReply: Bool?
     public var attachment: [Attachment]?
     public var annotations: [Annotation]?
+    /// Each emoji that people reacted with and how many did. It does not say who.
+    public var emojiReactionSummaries: [EmojiReactionSummary]?
 
     public var id: String { name }
 
@@ -132,13 +207,17 @@ public struct Message: Codable, Identifiable, Hashable, Sendable {
         threadReply = try container.decodeIfPresent(Bool.self, forKey: .threadReply)
         attachment = try container.decodeIfPresent([Attachment].self, forKey: .attachment)
         annotations = try container.decodeIfPresent([Annotation].self, forKey: .annotations)
+        // Reactions are extra: the message loads without them if they cannot be read.
+        emojiReactionSummaries = container.lenient([Lossy<EmojiReactionSummary>].self, forKey: .emojiReactionSummaries)?
+            .compactMap(\.value)
     }
 
     public init(
         name: String, sender: User? = nil, createTime: Date? = nil, text: String? = nil,
         formattedText: String? = nil, attachment: [Attachment]? = nil,
-        annotations: [Annotation]? = nil
+        annotations: [Annotation]? = nil, emojiReactionSummaries: [EmojiReactionSummary]? = nil
     ) {
+        self.emojiReactionSummaries = emojiReactionSummaries
         self.name = name
         self.sender = sender
         self.createTime = createTime

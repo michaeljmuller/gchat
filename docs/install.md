@@ -50,8 +50,14 @@ opens System Settings.
   can be up to 10 minutes. The Check Now button checks at once.
 - Closing the window leaves GChat running, so notifications continue. A
   setting changes this.
-- GChat cannot reply inside a thread, add reactions, edit or delete
-  messages, send files, or search message text.
+- Reactions such as a thumbs-up show below a message. Pointing at a message
+  shows a control that adds one. A click on a reaction adds the same one, or
+  removes the person's own.
+- Emoticons such as :) and short codes such as :thumbsup: change to emoji
+  while they are typed. The smiley button next to the message field opens the emoji
+  picker of macOS.
+- GChat cannot reply inside a thread, edit or delete messages, send files,
+  or search message text.
 
 
 ## If something goes wrong

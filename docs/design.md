@@ -75,10 +75,10 @@ The wait does not depend on whether GChat is in front. The person can be
 working with a colleague and switching between GChat and other apps.
 
 The limits: 2 seconds is the shortest wait, because all copies of GChat
-share the quota of one Cloud project (to-do.md, "Quota"). The growth is a
-tenth and not a doubling, because a pause in a conversation is not a
-failure. With doubling, the wait is at 30 seconds within a minute, while
-the person is still typing a reply.
+share the quota of one Cloud project ("Requests and quotas", below). The
+growth is a tenth and not a doubling, because a pause in a conversation is
+not a failure. With doubling, the wait is at 30 seconds within a minute,
+while the person is still typing a reply.
 
 The longest wait decides how late the first message after a quiet time
 shows: up to 10 minutes. The owner chose 10 minutes on October 7, 2026, with
@@ -155,6 +155,14 @@ What GChat does:
   the notice.
 - On a notice for a changed or deleted message, GChat updates or removes
   the message in a loaded transcript.
+- The subscription also asks for reaction events (reaction.v1.created and
+  reaction.v1.deleted). The notice names the reaction,
+  spaces/A/messages/B/reactions/C. GChat reads message B again, which
+  brings the new counts. A batch event names no single reaction, so GChat
+  then reads the 50 newest messages of that conversation again.
+- Event types cannot be changed on a subscription. A saved subscription
+  that lacks a type GChat asks for, for example one made before reactions,
+  is deleted and made again.
 - GChat handles each message once. Pub/Sub can deliver a notice twice.
 - While the stream is open, GChat polls only once a minute, as a safety net.
   When the stream closes, it polls at the normal rate and connects again.
@@ -328,7 +336,39 @@ that controls it, and its risks, are in directory-sharing-request.md.
 ## Requests and quotas
 
 Google limits the requests of each Cloud project, so all copies of GChat
-with the same client ID share one quota. The numbers are in to-do.md.
+with the same client ID share one quota. The limits, read in October 2026
+at https://developers.google.com/workspace/chat/limits:
+
+    For each Cloud project, each minute:
+      message reads         3000
+      space reads           3000
+      membership reads      3000
+      message writes        3000
+      space writes            60   (new conversations)
+    For each space, each second, shared by all apps:
+      reads                   15
+      writes                   1
+
+Over a limit, Google answers 429. A higher limit for a project can be
+requested, but Google does not guarantee it.
+
+A copy with push delivery polls once a minute. One copy that polls uses
+about:
+
+- During a conversation: 30 space reads a minute, and one message read for
+  each conversation that changed.
+- After 5 minutes without a message: 2 space reads a minute, and fewer as
+  the wait grows to 10 minutes.
+- At the first launch: one membership read for each direct message and group
+  chat, about 200 for an account with 200 conversations, at about 10 a
+  second.
+
+The limits allow about 100 polling copies in active conversations at the
+same time. Zia Consulting has about 30 active employees, and their copies
+use push delivery, so the limits are far away. The risks are a relay
+failure during a busy time, and many first launches in the same minute.
+
+What GChat does about the limits:
 
 - When Google answers 429 (too many requests), GChat stops polling and stops
   the lookups in the background. It waits 2 seconds, doubled after each
@@ -337,6 +377,60 @@ with the same client ID share one quota. The numbers are in to-do.md.
 - The lookups after the first launch (member lists and read markers) run
   four at a time, with a pause after each, for about 10 requests a second.
 
+
+## Reactions
+
+Status, October 14, 2026: built and unit tested against a fake Chat API.
+Not run against Google yet.
+
+A message from the Chat API has a summary of its reactions: each emoji and
+its count, not who added them. GChat shows the counts from the message at
+once. When a message with reactions shows in the transcript, GChat lists
+its reactions (spaces.messages.reactions.list) to learn who added each one,
+for the names on hover and for the mark on the signed-in person's own. It
+lists them again only when the counts change. This costs one message read
+for each message with reactions that shows, once.
+
+A click adds a reaction (reactions.create) or deletes the person's own
+(reactions.delete). The count changes when Google answers, not before.
+When a call fails, GChat reads the message again to show what Google has.
+
+Reactions do not change the time of last activity of a conversation, so
+polling the conversation list does not find them. Push delivery brings
+them as events (Push delivery, above). Without push delivery, GChat reads
+the 50 newest messages of the open conversation once a minute, only while
+GChat is in front. With push delivery, the safety poll once a minute does
+the same.
+
+Custom emoji of the organization show as their name. Their image needs the
+customEmojis API and its own scope, so a new sign-in for everyone. Left out
+for now (to-do.md).
+
+No notification for a reaction to the person's own message. Google Chat
+does not make one on the Mac either, and a notification for each thumbs-up
+is noise.
+
+The scope chat.messages, which GChat has, covers reactions and their
+events, according to the reference pages of the Chat API in October 2026.
+So no new sign-in is needed.
+
+Not verified yet:
+
+- That the list call answers with the user of each reaction for a human
+  sign-in.
+- That a reaction event names the reaction in its payload, as
+  src/python/relay/relay/events.py expects.
+- That Google sends batch events without a subscription for them.
+
+## Emoji in the composer
+
+A standard emoji is text, so the composer and the transcript need nothing
+special for it. The composer adds a button for the emoji picker of macOS,
+and changes emoticons and short codes to emoji as they are typed
+(GChatKit/Sources/GChatKit/Markup/EmojiShortcuts.swift). The change goes
+through the text view's insertText, so it is one step for undo. Only a
+whole word changes: "x:)" and a time such as 10:30 stay as typed. Emoticons
+that are also ordinary text, such as "B)", are not in the list.
 
 ## Message text
 
@@ -436,7 +530,9 @@ build gets a new identity at each build and asks each time.
   bundle ID, so the Keychain treats both builds as one app. Debug builds
   also carry get-task-allow, which the Xcode debugger needs.
 - Both builds have the bundle ID org.themullers.gchat. Only one can run at a
-  time.
+  time. macOS does not prevent two copies at different paths, so the app
+  checks at launch: if another copy is running, the new copy brings it to
+  the front and quits (GChatApp.swift).
 
 Rejected (October 3, 2026):
 

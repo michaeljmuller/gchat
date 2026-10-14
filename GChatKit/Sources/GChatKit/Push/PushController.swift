@@ -165,8 +165,13 @@ public final class PushController {
         }
     }
 
-    /// Reactivates or renews a subscription as needed. False if it is deleted.
+    /// Reactivates or renews a subscription as needed. False if it is deleted,
+    /// or lacks event types and must be replaced.
     private func makeUsable(_ subscription: EventSubscription) async throws -> Bool {
+        if !subscription.hasAllEventTypes {
+            Self.log.info("Subscription lacks event types, replacing it")
+            return false
+        }
         if subscription.isSuspended {
             try await subscriptions.reactivate(subscription.name)
             return true

@@ -212,6 +212,7 @@ enum AppSettings {
     static let hideUnnamedAppsKey = "hideUnnamedAppConversations"
     static let hideAppsKey = "hideAppConversations"
     static let quitOnCloseKey = "quitWhenWindowCloses"
+    static let emoticonsKey = "replaceEmoticons"
 
     /// Whether the sidebar settings hide this conversation. Reads the stored
     /// settings directly; views that must update live also observe the keys.

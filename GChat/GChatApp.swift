@@ -4,8 +4,28 @@ import SwiftUI
 @main
 struct GChatApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var model = AppModel()
-    @State private var updater = Updater()
+    @State private var model: AppModel
+    @State private var updater: Updater
+
+    init() {
+        // Before AppModel, which connects to Google and the relay.
+        Self.yieldToRunningCopy()
+        _model = State(initialValue: AppModel())
+        _updater = State(initialValue: Updater())
+    }
+
+    /// The Debug build and the release have the same bundle ID, and macOS
+    /// lets two copies at different paths run together. Each would then post
+    /// its own notifications. The copy that is already running stays; this
+    /// one brings it to the front and quits.
+    private static func yieldToRunningCopy() {
+        guard let id = Bundle.main.bundleIdentifier else { return }
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: id)
+            .filter { $0 != .current }
+        guard let other = others.first else { return }
+        other.activate()
+        exit(0)
+    }
 
     var body: some Scene {
         Window("GChat", id: "main") {

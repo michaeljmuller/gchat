@@ -67,6 +67,19 @@ import Testing
         #expect(events.calls == ["get", "renew", "get", "reactivate"])
     }
 
+    @Test func replacesASubscriptionWithoutTheReactionEvents() async throws {
+        // Made by a version of GChat that asked for message events only.
+        defaults.set("subscriptions/old", forKey: "pushSubscription")
+        events.update {
+            $0.createConflicts = true
+            $0.subscriptions["subscriptions/old"] = EventSubscription(
+                name: "subscriptions/old", state: "ACTIVE", expireTime: Date().addingTimeInterval(6 * 86400),
+                eventTypes: [WorkspaceEventsAPI.messageCreated], pubsubTopic: "projects/p/topics/gchat-events")
+        }
+        #expect(try await controller().ensureSubscription() == "subscriptions/new-1")
+        #expect(events.calls == ["get", "create", "find", "delete", "create"])
+    }
+
     @Test func replacesASavedSubscriptionThatIsGone() async throws {
         defaults.set("subscriptions/gone", forKey: "pushSubscription")
         #expect(try await controller().ensureSubscription() == "subscriptions/new-1")
