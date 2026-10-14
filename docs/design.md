@@ -531,8 +531,13 @@ build gets a new identity at each build and asks each time.
   also carry get-task-allow, which the Xcode debugger needs.
 - Both builds have the bundle ID org.themullers.gchat. Only one can run at a
   time. macOS does not prevent two copies at different paths, so the app
-  checks at launch: if another copy is running, the new copy brings it to
-  the front and quits (GChatApp.swift).
+  checks at launch: if another copy is running, the new copy opens it, which
+  brings it to the front and shows its window as a click on its Dock icon
+  does, and quits (GChatApp.swift). A copy that quits within a second does
+  not count, so the copy that an update starts does not yield to the copy
+  it replaces. On October 14, 2026, an update started while a Debug build
+  ran. The new copy yielded to the Debug build, whose window was closed, so
+  no window showed.
 
 Rejected (October 3, 2026):
 

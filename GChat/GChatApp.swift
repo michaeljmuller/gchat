@@ -17,13 +17,31 @@ struct GChatApp: App {
     /// The Debug build and the release have the same bundle ID, and macOS
     /// lets two copies at different paths run together. Each would then post
     /// its own notifications. The copy that is already running stays; this
-    /// one brings it to the front and quits.
+    /// one brings it to the front with its window, and quits.
     private static func yieldToRunningCopy() {
         guard let id = Bundle.main.bundleIdentifier else { return }
         let others = NSRunningApplication.runningApplications(withBundleIdentifier: id)
-            .filter { $0 != .current }
+            .filter { $0 != .current && !$0.isTerminated }
         guard let other = others.first else { return }
-        other.activate()
+        // A copy that is quitting, for example the one that an update
+        // replaces, does not count. The run loop must run for isTerminated
+        // to change.
+        let deadline = Date().addingTimeInterval(1)
+        while !other.isTerminated, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        if other.isTerminated { return }
+        // Opening the running copy is what a click on its Dock icon does: it
+        // shows the window when it was closed. activate() alone does not.
+        if let url = other.bundleURL {
+            let done = DispatchSemaphore(value: 0)
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { _, _ in
+                done.signal()
+            }
+            _ = done.wait(timeout: .now() + 2)
+        } else {
+            other.activate()
+        }
         exit(0)
     }
 
