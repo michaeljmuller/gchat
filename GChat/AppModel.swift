@@ -16,6 +16,8 @@ final class AppModel {
     /// False when macOS has notifications turned off for GChat.
     private(set) var notificationsAllowed = true
     var drafts: [String: String] = [:]
+    /// A pasted image waiting to be sent, by conversation.
+    var draftFiles: [String: OutgoingFile] = [:]
     var clientID: String {
         didSet { UserDefaults.standard.set(clientID, forKey: Self.clientIDKey) }
     }
@@ -132,6 +134,7 @@ final class AppModel {
         store = nil
         auth = nil
         drafts = [:]
+        draftFiles = [:]
         notifier.setBadge(0)
         AttachmentFiles.removeAll()
     }

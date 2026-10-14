@@ -5,8 +5,18 @@ import os
 public struct PendingMessage: Identifiable, Hashable, Sendable {
     public let id: UUID
     public var text: String
+    /// A file that goes with the text, for example a pasted image.
+    public var file: OutgoingFile?
+    /// Set once the file is uploaded, so that Try Again does not upload it again.
+    var upload: Attachment.DataRef?
     /// Set when sending failed.
     public var error: String?
+
+    init(id: UUID, text: String, file: OutgoingFile? = nil) {
+        self.id = id
+        self.text = text
+        self.file = file
+    }
 }
 
 public struct Transcript: Sendable {
@@ -720,10 +730,11 @@ public final class ChatStore {
         }
     }
 
-    public func send(_ text: String, to name: String) async {
+    /// Sends text, a file, or both as one message.
+    public func send(_ text: String, file: OutgoingFile? = nil, to name: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        let pending = PendingMessage(id: UUID(), text: trimmed)
+        guard !trimmed.isEmpty || file != nil else { return }
+        let pending = PendingMessage(id: UUID(), text: trimmed, file: file)
         transcripts[name, default: Transcript()].pending.append(pending)
         await deliver(pending, to: name)
     }
@@ -731,7 +742,8 @@ public final class ChatStore {
     public func retry(_ pending: PendingMessage, in name: String) async {
         guard let index = transcripts[name]?.pending.firstIndex(where: { $0.id == pending.id }) else { return }
         transcripts[name]?.pending[index].error = nil
-        await deliver(pending, to: name)
+        // The stored copy has the upload, if one worked.
+        await deliver(transcripts[name]?.pending[index] ?? pending, to: name)
     }
 
     public func discard(_ pending: PendingMessage, in name: String) {
@@ -740,7 +752,17 @@ public final class ChatStore {
 
     private func deliver(_ pending: PendingMessage, to name: String) async {
         do {
-            let message = try await chat.sendMessage(pending.text, to: name)
+            var upload = pending.upload
+            if upload == nil, let file = pending.file {
+                guard file.data.count <= OutgoingFile.maxSize else {
+                    throw APIError(status: 413, message: "The file is larger than Google's limit of 200 MB.")
+                }
+                upload = try await chat.uploadAttachment(file, to: name)
+                if let index = transcripts[name]?.pending.firstIndex(where: { $0.id == pending.id }) {
+                    transcripts[name]?.pending[index].upload = upload
+                }
+            }
+            let message = try await chat.sendMessage(pending.text, attachment: upload, to: name)
             transcripts[name]?.pending.removeAll { $0.id == pending.id }
             merge([message], into: name)
             readTimes[name] = max(Date(), message.createTime ?? .distantPast)

@@ -56,8 +56,10 @@ opens System Settings.
 - Emoticons such as :) and short codes such as :thumbsup: change to emoji
   while they are typed. The smiley button next to the message field opens the emoji
   picker of macOS.
-- GChat cannot reply inside a thread, edit or delete messages, send files,
-  or search message text.
+- Paste an image, for example a screenshot, into the message field to send
+  it. Other files cannot be sent yet.
+- GChat cannot reply inside a thread, edit or delete messages, or search
+  message text.
 
 
 ## If something goes wrong

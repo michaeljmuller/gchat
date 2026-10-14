@@ -29,16 +29,18 @@ public struct APIClient: Sendable {
     }
 
     public func send<Response: Decodable>(
-        _ method: String = "GET", _ url: URL, body: Data? = nil
+        _ method: String = "GET", _ url: URL, body: Data? = nil, contentType: String = "application/json"
     ) async throws -> Response {
-        try decoder.decode(Response.self, from: await data(method, url, body: body))
+        try decoder.decode(Response.self, from: await data(method, url, body: body, contentType: contentType))
     }
 
     /// The undecoded response body.
-    public func data(_ method: String = "GET", _ url: URL, body: Data? = nil) async throws -> Data {
-        var (data, status) = try await perform(method, url, body: body, forceRefresh: false)
+    public func data(
+        _ method: String = "GET", _ url: URL, body: Data? = nil, contentType: String = "application/json"
+    ) async throws -> Data {
+        var (data, status) = try await perform(method, url, body: body, contentType: contentType, forceRefresh: false)
         if status == 401 {
-            (data, status) = try await perform(method, url, body: body, forceRefresh: true)
+            (data, status) = try await perform(method, url, body: body, contentType: contentType, forceRefresh: true)
         }
         guard (200..<300).contains(status) else {
             let body = (try? JSONDecoder().decode(ErrorEnvelope.self, from: data))?.error
@@ -48,16 +50,17 @@ public struct APIClient: Sendable {
     }
 
     private func perform(
-        _ method: String, _ url: URL, body: Data?, forceRefresh: Bool
+        _ method: String, _ url: URL, body: Data?, contentType: String, forceRefresh: Bool
     ) async throws -> (Data, Int) {
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.timeoutInterval = 30
+        // An upload of a large file needs longer than a normal request.
+        request.timeoutInterval = (body?.count ?? 0) > 1_000_000 ? 300 : 30
         let token = try await tokens.accessToken(forceRefresh: forceRefresh)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         if let body {
             request.httpBody = body
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         }
         let (data, response) = try await session.data(for: request)
         return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)

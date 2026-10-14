@@ -61,6 +61,13 @@ public struct Attachment: Codable, Hashable, Sendable {
 
     public struct DataRef: Codable, Hashable, Sendable {
         public var resourceName: String?
+        /// Set on an upload. A new message refers to the upload with it.
+        public var attachmentUploadToken: String?
+
+        public init(resourceName: String? = nil, attachmentUploadToken: String? = nil) {
+            self.resourceName = resourceName
+            self.attachmentUploadToken = attachmentUploadToken
+        }
     }
 
     public var name: String?
@@ -83,6 +90,24 @@ public struct Attachment: Codable, Hashable, Sendable {
         }
         return downloadUri.flatMap(URL.init(string:))
     }
+}
+
+/// A file to upload with a new message, for example a pasted image.
+public struct OutgoingFile: Hashable, Sendable {
+    public var data: Data
+    public var filename: String
+    public var contentType: String
+
+    /// Google's limit for an upload.
+    public static let maxSize = 200 * 1024 * 1024
+
+    public init(data: Data, filename: String, contentType: String) {
+        self.data = data
+        self.filename = filename
+        self.contentType = contentType
+    }
+
+    public var isImage: Bool { contentType.hasPrefix("image/") }
 }
 
 public struct Annotation: Codable, Hashable, Sendable {

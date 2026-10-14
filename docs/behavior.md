@@ -109,6 +109,16 @@ requests behind each feature are in requirements.md.
 ## Sending
 
 - Return sends. Shift-Return or Option-Return adds a line break.
+- Paste (Command-V) in the message field takes an image from the clipboard:
+  a screenshot, an image copied in another app, or an image file copied in
+  the Finder. A picture of it shows above the field, with a button that
+  removes it. Return sends the image and the text together as one message,
+  or the image alone. A second paste replaces the first image. When the
+  clipboard holds text, Paste pastes the text, even if images came with it,
+  as from a web page.
+- An image that is being sent shows faded in the transcript until Google
+  accepts it. If sending fails, Try Again does not upload the image again
+  when the upload already worked.
 - The smiley button left of the message field opens the emoji picker of
   macOS. Control-Command-Space and Edit > Emoji & Symbols do the same.
 - Emoticons change to emoji when a space, a line break or Return follows

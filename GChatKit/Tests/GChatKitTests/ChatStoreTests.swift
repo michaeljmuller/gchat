@@ -540,4 +540,34 @@ import Testing
         #expect(store.isMine(try #require(transcript.messages.last)))
         #expect(store.unreadCount == 0)
     }
+
+    @Test func anImageIsUploadedOnceAndSentWithTheText() async throws {
+        let store = await makeStore()
+        store.selection = "spaces/team"
+        await store.open("spaces/team")
+        let image = OutgoingFile(data: Data([1, 2, 3]), filename: "Pasted image.png", contentType: "image/png")
+
+        chat.update { $0.sendFails = true }
+        await store.send("look", file: image, to: "spaces/team")
+        let pending = try #require(store.transcript(for: "spaces/team").pending.first)
+        #expect(pending.file == image)
+        #expect(pending.error != nil)
+
+        chat.update { $0.sendFails = false }
+        await store.retry(pending, in: "spaces/team")
+        #expect(store.transcript(for: "spaces/team").pending.isEmpty)
+        // Try Again used the upload from the first attempt.
+        #expect(chat.update { $0.uploads } == ["Pasted image.png"])
+        #expect(chat.update { $0.sentAttachments } == ["token-1"])
+    }
+
+    @Test func anImageCanBeSentWithoutText() async throws {
+        let store = await makeStore()
+        await store.open("spaces/team")
+        let image = OutgoingFile(data: Data([1]), filename: "a.png", contentType: "image/png")
+        await store.send("  ", file: image, to: "spaces/team")
+        #expect(chat.update { $0.sentAttachments } == ["token-1"])
+        await store.send("  ", to: "spaces/team")
+        #expect(chat.update { $0.sentAttachments.count } == 1)
+    }
 }

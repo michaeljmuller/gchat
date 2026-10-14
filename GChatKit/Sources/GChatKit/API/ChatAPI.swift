@@ -9,7 +9,10 @@ public protocol ChatService: Sendable {
     func getSpace(_ name: String) async throws -> Space
     /// Returns one page, newest first. `after` limits it to messages created later.
     func listMessages(in space: String, pageSize: Int, pageToken: String?, after: Date?) async throws -> MessagePage
-    func sendMessage(_ text: String, to space: String) async throws -> Message
+    /// Text, an upload (`uploadAttachment`), or both.
+    func sendMessage(_ text: String, attachment: Attachment.DataRef?, to space: String) async throws -> Message
+    /// Uploads a file to a conversation, for a message that `sendMessage` then sends.
+    func uploadAttachment(_ file: OutgoingFile, to space: String) async throws -> Attachment.DataRef
     /// One message by its resource name, "spaces/A/messages/B".
     func getMessage(_ name: String) async throws -> Message
     func listMembers(of space: String) async throws -> [Membership]
@@ -110,9 +113,41 @@ public struct ChatAPI: ChatService {
         return MessagePage(messages: (page.messages ?? []).compactMap(\.value), nextPageToken: token)
     }
 
-    public func sendMessage(_ text: String, to space: String) async throws -> Message {
-        let body = try JSONEncoder().encode(["text": text])
+    public func sendMessage(_ text: String, attachment: Attachment.DataRef?, to space: String) async throws -> Message {
+        struct Body: Encodable {
+            struct Item: Encodable { var attachmentDataRef: Attachment.DataRef }
+            var text: String?
+            var attachment: [Item]?
+        }
+        let body = try JSONEncoder().encode(Body(
+            text: text.isEmpty ? nil : text,
+            attachment: attachment.map { [Body.Item(attachmentDataRef: $0)] }))
         return try await client.send("POST", url("\(space)/messages"), body: body)
+    }
+
+    public func uploadAttachment(_ file: OutgoingFile, to space: String) async throws -> Attachment.DataRef {
+        struct Response: Decodable { var attachmentDataRef: Attachment.DataRef? }
+        // A multipart upload: the file name as JSON, then the file.
+        let boundary = "gchat-\(UUID().uuidString)"
+        var body = Data()
+        let metadata = try JSONEncoder().encode(["filename": file.filename])
+        body.append(Data("--\(boundary)\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n".utf8))
+        body.append(metadata)
+        body.append(Data("\r\n--\(boundary)\r\nContent-Type: \(file.contentType)\r\n\r\n".utf8))
+        body.append(file.data)
+        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "chat.googleapis.com"
+        components.path = "/upload/v1/\(space)/attachments:upload"
+        components.queryItems = [URLQueryItem(name: "uploadType", value: "multipart")]
+        let response: Response = try await client.send(
+            "POST", components.url!, body: body, contentType: "multipart/related; boundary=\(boundary)")
+        guard let ref = response.attachmentDataRef else {
+            throw APIError(status: 500, message: "Google returned no reference to the upload")
+        }
+        return ref
     }
 
     public func getMessage(_ name: String) async throws -> Message {

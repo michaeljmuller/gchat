@@ -61,43 +61,21 @@ out:
   folder. Not verified yet.
 
 
-## Sending images and files
+## Sending images and files: what is left
 
-Requested by the owner on October 12, 2026, for images. Not started.
+Requested by the owner on October 12, 2026, for images. Pasting an image
+was built on October 14, 2026 (behavior.md, "Sending"; design.md,
+"Attachments"). Left:
 
-GChat shows images and files that other people sent (behavior.md), but
-cannot send them (install.md).
-
-Images and other files use the same upload call of the Chat API. GChat
-uploads the file to the conversation, and then sends a message that refers
-to the upload. So the work for images covers most of the work for other
-files. What differs is in the window:
-
-- Both: the upload, progress and Cancel, an error when the upload fails,
-  a message with text and an attachment together, and more than one
-  attachment in a message.
-- Images only: paste from the clipboard, for example a screenshot, and a
-  small picture of the image in the composer before it is sent.
-- Other files: a row with the name and the size in the composer.
-- Both, with little extra work when one exists: a file dialog, and drag
-  and drop on the window.
-
-Decide:
-
-- Images only first, or all files from the start.
-- Whether GChat makes large images smaller before the upload.
-
-Other items that need this: "Send to the developer" in Problem reports,
-below.
-
-Not verified yet:
-
-- That the scope chat.messages, which GChat has, allows the upload. A new
-  scope makes each person sign in again.
-- The size limit, probably 200 MB, and which file types Google refuses.
-- Which quota an upload uses (Quota, below).
-- That the sandbox lets GChat read a file that was dropped or pasted. A
-  file from the file dialog is allowed.
+- Try the cases that design.md lists as not verified yet.
+- Drag and drop on the window, and a file dialog.
+- Files other than images: a row with the name and the size in the
+  composer. The upload already takes any file.
+- More than one image in a message.
+- Progress and Cancel for a large upload. Today the image shows faded until
+  the message is sent.
+- Decide whether GChat makes large images smaller before the upload.
+- "Send to the developer" in Problem reports, below, can use the upload.
 
 
 ## Quick Look opens empty

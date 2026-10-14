@@ -106,6 +106,7 @@ All in the Settings window (October 2, 2026, unless stated):
   changes from other people without a refresh. (October 12, 2026)
 - Emoji in messages, including emoticons such as :) that change to emoji.
   (October 12, 2026; built on request October 14, 2026)
+- Send images. (October 12, 2026) Paste an image. (October 14, 2026)
 
 
 ## Prompt delivery

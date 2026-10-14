@@ -206,6 +206,33 @@ import Testing
         #expect(requests.values[1].2 == #"{"emoji":{"customEmoji":{"uid":"c1"}}}"#)
     }
 
+    @Test func uploadIsMultipartAndTheMessageRefersToIt() async throws {
+        let requests = Recorder<(String, String, String, String)>()
+        StubProtocol.handler = { request in
+            requests.append((
+                request.httpMethod ?? "", request.url!.absoluteString, request.bodyString,
+                request.value(forHTTPHeaderField: "Content-Type") ?? ""))
+            if request.url!.path.hasPrefix("/upload/") {
+                return (200, #"{"attachmentDataRef": {"resourceName": "R", "attachmentUploadToken": "T"}}"#)
+            }
+            return (200, #"{"name": "spaces/A/messages/M"}"#)
+        }
+        let api = ChatAPI(client: APIClient(tokens: FixedToken(), session: StubProtocol.session()))
+        let file = OutgoingFile(data: Data("PNGDATA".utf8), filename: "shot.png", contentType: "image/png")
+        let ref = try await api.uploadAttachment(file, to: "spaces/A")
+        _ = try await api.sendMessage("", attachment: ref, to: "spaces/A")
+
+        let upload = requests.values[0]
+        #expect(upload.1 == "https://chat.googleapis.com/upload/v1/spaces/A/attachments:upload?uploadType=multipart")
+        #expect(upload.3.hasPrefix("multipart/related; boundary="))
+        #expect(upload.2.contains(#"{"filename":"shot.png"}"#))
+        #expect(upload.2.contains("Content-Type: image/png\r\n\r\nPNGDATA\r\n"))
+        let body = try #require(try JSONSerialization.jsonObject(with: Data(requests.values[1].2.utf8)) as? [String: Any])
+        #expect(body["text"] == nil)
+        let item = try #require((body["attachment"] as? [[String: Any]])?.first)
+        #expect((item["attachmentDataRef"] as? [String: String]) == ["resourceName": "R", "attachmentUploadToken": "T"])
+    }
+
     @Test func markReadPatchesReadState() async throws {
         let requests = Recorder<(String, String, String)>()
         StubProtocol.handler = { request in

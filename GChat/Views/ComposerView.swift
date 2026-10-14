@@ -1,9 +1,12 @@
 import AppKit
 import GChatKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ComposerView: View {
     @Binding var text: String
+    /// A pasted image that goes with the text.
+    @Binding var file: OutgoingFile?
     let placeholder: String
     let onSend: () -> Void
 
@@ -12,6 +15,19 @@ struct ComposerView: View {
     @State private var emojiRequests = 0
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let file {
+                ComposerFileView(file: file) { self.file = nil }
+                    // In line with the text field: past the emoji button.
+                    .padding(.leading, 26)
+            }
+            row
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+
+    private var row: some View {
         HStack(alignment: .bottom, spacing: 8) {
             Button {
                 emojiRequests += 1
@@ -24,7 +40,9 @@ struct ComposerView: View {
             .help("Emoji & Symbols (Control-Command-Space)")
             .padding(.bottom, 6)
 
-            ComposerTextView(text: $text, height: $height, emojiRequests: emojiRequests, onSubmit: onSend)
+            ComposerTextView(
+                text: $text, height: $height, emojiRequests: emojiRequests, onSubmit: onSend,
+                onPasteFile: { file = $0 })
                 .frame(height: height)
                 .overlay(alignment: .topLeading) {
                     if text.isEmpty {
@@ -51,12 +69,61 @@ struct ComposerView: View {
             .help("Send (Return)")
             .padding(.bottom, 3)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
     }
 
     private var isEmpty: Bool {
-        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && file == nil
+    }
+}
+
+/// The pasted image above the text field, with a button that removes it.
+struct ComposerFileView: View {
+    let file: OutgoingFile
+    let onRemove: () -> Void
+
+    var body: some View {
+        FileThumbnail(file: file, maxSize: CGSize(width: 200, height: 120))
+            .overlay(alignment: .topTrailing) {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .black.opacity(0.6))
+                        .font(.system(size: 16))
+                }
+                .buttonStyle(.plain)
+                .help("Remove")
+                .padding(4)
+            }
+            .accessibilityLabel("Pasted image \(file.filename)")
+    }
+}
+
+/// A small picture of an image that is not sent yet, or the file name for
+/// another kind of file.
+struct FileThumbnail: View {
+    let file: OutgoingFile
+    let maxSize: CGSize
+    private let image: NSImage?
+
+    init(file: OutgoingFile, maxSize: CGSize) {
+        self.file = file
+        self.maxSize = maxSize
+        self.image = file.isImage ? NSImage(data: file.data) : nil
+    }
+
+    var body: some View {
+        if let image {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: min(maxSize.width, image.size.width), maxHeight: min(maxSize.height, image.size.height))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(.separator) }
+        } else {
+            Label(file.filename, systemImage: "doc")
+                .padding(6)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+        }
     }
 }
 
@@ -68,6 +135,7 @@ struct ComposerTextView: NSViewRepresentable {
     @Binding var height: CGFloat
     let emojiRequests: Int
     let onSubmit: () -> Void
+    let onPasteFile: (OutgoingFile) -> Void
 
     static let inset = NSSize(width: 4, height: 7)
     private static let maxLines: CGFloat = 8
@@ -83,7 +151,20 @@ struct ComposerTextView: NSViewRepresentable {
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
 
-        let textView = scrollView.documentView as! NSTextView
+        // The standard text view, swapped for one that takes pasted images,
+        // with the same layout settings.
+        let standard = scrollView.documentView as! NSTextView
+        let textView = PastingTextView(frame: standard.frame)
+        textView.minSize = standard.minSize
+        textView.maxSize = standard.maxSize
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+        scrollView.documentView = textView
+        textView.onPasteFile = { [weak coordinator = context.coordinator] file in
+            coordinator?.parent.onPasteFile(file)
+        }
         textView.delegate = context.coordinator
         textView.font = .preferredFont(forTextStyle: .body)
         textView.isRichText = false
@@ -181,5 +262,68 @@ struct ComposerTextView: NSViewRepresentable {
                 parent.height = height
             }
         }
+    }
+}
+
+/// The composer's text view. Paste takes an image as an attachment; text
+/// pastes as usual.
+final class PastingTextView: NSTextView {
+    var onPasteFile: ((OutgoingFile) -> Void)?
+
+    override func paste(_ sender: Any?) {
+        if let file = PastedFile.read(from: .general) {
+            onPasteFile?(file)
+        } else {
+            super.paste(sender)
+        }
+    }
+
+    /// A plain-text view turns Paste off when the clipboard holds no text.
+    /// The menu and Command-V ask here.
+    override func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if item.action == #selector(paste(_:)), PastedFile.isAvailable(on: .general) { return true }
+        return super.validateMenuItem(item)
+    }
+}
+
+enum PastedFile {
+    private static let fileOptions: [NSPasteboard.ReadingOptionKey: Any] = [
+        .urlReadingFileURLsOnly: true,
+        .urlReadingContentsConformToTypes: [UTType.image.identifier],
+    ]
+    private static let imageTypes: [NSPasteboard.PasteboardType] = [
+        .png, NSPasteboard.PasteboardType(UTType.jpeg.identifier), .tiff,
+    ]
+
+    /// Whether the clipboard may hold an image, without reading it. For the
+    /// Paste menu item, which macOS checks often.
+    static func isAvailable(on pasteboard: NSPasteboard) -> Bool {
+        pasteboard.canReadObject(forClasses: [NSURL.self], options: fileOptions)
+            || pasteboard.availableType(from: imageTypes) != nil
+    }
+
+    /// An image on the clipboard: a copied image file, for example from the
+    /// Finder, or image data, for example a screenshot. Nil when the
+    /// clipboard holds text, so that copied text with pictures, as from a web
+    /// page, pastes as text.
+    static func read(from pasteboard: NSPasteboard) -> OutgoingFile? {
+        if let url = (pasteboard.readObjects(forClasses: [NSURL.self], options: fileOptions) as? [URL])?.first,
+           let data = try? Data(contentsOf: url) {
+            let type = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+            return OutgoingFile(data: data, filename: url.lastPathComponent, contentType: type)
+        }
+        if pasteboard.string(forType: .string)?.isEmpty == false { return nil }
+        if let data = pasteboard.data(forType: .png) {
+            return OutgoingFile(data: data, filename: "Pasted image.png", contentType: "image/png")
+        }
+        if let data = pasteboard.data(forType: NSPasteboard.PasteboardType(UTType.jpeg.identifier)) {
+            return OutgoingFile(data: data, filename: "Pasted image.jpg", contentType: "image/jpeg")
+        }
+        // Other image data, such as TIFF, goes as PNG, which every Chat client shows.
+        if let tiff = pasteboard.data(forType: .tiff),
+           let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+            return OutgoingFile(data: png, filename: "Pasted image.png", contentType: "image/png")
+        }
+        return nil
     }
 }

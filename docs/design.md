@@ -457,6 +457,25 @@ Not verified yet: "Open with Preview" in Quick Look appears to put a copy of
 the file in the Documents folder, because Preview cannot read the app's
 sandbox.
 
+Sending, October 14, 2026, for pasted images only:
+
+- GChat uploads the file to the conversation (media.upload, a multipart
+  request to /upload/v1/spaces/A/attachments:upload), then creates the
+  message with the reference that the upload returns. Text and image are
+  one message.
+- The composer's text view is a subclass of NSTextView that takes Paste
+  when the clipboard holds an image. A plain-text view otherwise turns
+  Paste off for an image.
+- Image data goes as PNG or JPEG as it is. Other image data, such as TIFF
+  from some apps, is changed to PNG, which every Chat client shows. GChat
+  does not make large images smaller.
+- A pending message keeps the upload's reference, so Try Again sends the
+  message without a second upload.
+- The owner pasted and sent an image on October 14, 2026, so the scope
+  chat.messages allows the upload. Not verified yet: that a message with an
+  image and no text is accepted, and that the sandbox lets GChat read an
+  image file copied in the Finder.
+
 
 ## Scrolling in the transcript
 

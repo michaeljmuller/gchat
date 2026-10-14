@@ -16,6 +16,9 @@ struct ConversationView: View {
                 text: Binding(
                     get: { model.drafts[space.name] ?? "" },
                     set: { model.drafts[space.name] = $0 }),
+                file: Binding(
+                    get: { model.draftFiles[space.name] },
+                    set: { model.draftFiles[space.name] = $0 }),
                 placeholder: "Message \(title)",
                 onSend: send)
         }
@@ -25,9 +28,11 @@ struct ConversationView: View {
 
     private func send() {
         let text = model.drafts[space.name] ?? ""
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let file = model.draftFiles[space.name]
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || file != nil else { return }
         model.drafts[space.name] = ""
-        Task { await store.send(text, to: space.name) }
+        model.draftFiles[space.name] = nil
+        Task { await store.send(text, file: file, to: space.name) }
     }
 }
 
@@ -365,10 +370,17 @@ struct PendingRowView: View {
         HStack(alignment: .top, spacing: 10) {
             Color.clear.frame(width: 32, height: 1)
             VStack(alignment: .leading, spacing: 4) {
-                Text(pending.text)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
+                if !pending.text.isEmpty {
+                    Text(pending.text)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let file = pending.file {
+                    // Faded until Google has it, like the text.
+                    FileThumbnail(file: file, maxSize: CGSize(width: 360, height: 270))
+                        .opacity(0.6)
+                }
                 if let error = pending.error {
                     HStack(spacing: 8) {
                         Label("Not sent: \(error)", systemImage: "exclamationmark.circle.fill")

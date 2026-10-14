@@ -86,6 +86,8 @@ final class FakeChat: ChatService, @unchecked Sendable {
         /// By message name.
         var reactions: [String: [Reaction]] = [:]
         var reactionCalls: [String] = []
+        var uploads: [String] = []
+        var sentAttachments: [String?] = []
     }
 
     private let lock = NSLock()
@@ -122,9 +124,17 @@ final class FakeChat: ChatService, @unchecked Sendable {
         return MessagePage(messages: matching)
     }
 
-    func sendMessage(_ text: String, to space: String) async throws -> Message {
+    func uploadAttachment(_ file: OutgoingFile, to space: String) async throws -> Attachment.DataRef {
+        update { state in
+            state.uploads.append(file.filename)
+            return Attachment.DataRef(attachmentUploadToken: "token-\(state.uploads.count)")
+        }
+    }
+
+    func sendMessage(_ text: String, attachment: Attachment.DataRef?, to space: String) async throws -> Message {
         try update { state in
             if state.sendFails { throw APIError(status: 500, message: "Server error") }
+            state.sentAttachments.append(attachment?.attachmentUploadToken)
             let message = Message(
                 name: "\(space)/messages/sent\(state.messages[space, default: []].count)",
                 sender: User(name: "users/me-id"), createTime: Date(), text: text)
