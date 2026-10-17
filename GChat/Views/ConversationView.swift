@@ -303,9 +303,7 @@ struct MessageRowView: View {
                 }
                 let reactions = store.reactions(on: message)
                 if !reactions.isEmpty {
-                    ReactionBar(store: store, message: message, reactions: reactions) {
-                        isPickingReaction = true
-                    }
+                    ReactionBar(store: store, message: message, reactions: reactions)
                 }
             }
             Spacer(minLength: 0)
@@ -408,7 +406,6 @@ struct ReactionBar: View {
     let store: ChatStore
     let message: Message
     let reactions: [ReactionGroup]
-    let onAdd: () -> Void
     /// The reaction under the pointer.
     @State private var hovered: String?
     /// When GChat last came to the front.
@@ -467,17 +464,6 @@ struct ReactionBar: View {
                 }
                 .accessibilityLabel("\(reaction.emoji.label) \(reaction.count): \(names(reaction))")
             }
-            Button {
-                guard Date().timeIntervalSince(activatedAt) > Self.activationGrace else { return }
-                onAdd()
-            } label: {
-                Image(systemName: "face.smiling")
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-            }
-            .buttonStyle(.plain)
-            .help("Add Reaction")
         }
         .arrowCursor()
         .onChange(of: store.isAppActive) { _, isActive in
