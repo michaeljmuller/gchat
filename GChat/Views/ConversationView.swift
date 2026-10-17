@@ -400,8 +400,9 @@ struct PendingRowView: View {
 
 // MARK: - Reactions
 
-/// The reactions below a message. A click on one adds the same reaction, or
-/// removes the signed-in person's own.
+/// The reactions below a message. A click on the signed-in person's own
+/// removes it. A click on another does nothing, so that a reaction is not
+/// added by accident; the control at the top right of the message adds them.
 struct ReactionBar: View {
     let store: ChatStore
     let message: Message
@@ -426,7 +427,7 @@ struct ReactionBar: View {
                 // only brings it to the front.
                 let removes = reaction.isMine && hovered == reaction.id && store.isAppActive
                 Button {
-                    guard Date().timeIntervalSince(activatedAt) > Self.activationGrace else { return }
+                    guard reaction.isMine, Date().timeIntervalSince(activatedAt) > Self.activationGrace else { return }
                     Task { await store.toggleReaction(reaction.emoji, on: message) }
                 } label: {
                     HStack(spacing: 3) {

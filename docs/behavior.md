@@ -84,8 +84,9 @@ requests behind each feature are in requirements.md.
   The full date and time of a message show when the pointer rests on its
   time. A custom emoji of the
   organization shows as its name, for example :party-dog:, not as an image.
-- A click on a reaction adds the same reaction, or removes the person's own.
-  Over the person's own reaction, a red X shows in place of the count.
+- A click on the person's own reaction removes it. Over it, a red X shows
+  in place of the count. A click on a reaction of someone else does
+  nothing, so that a reaction is not added by accident.
 - Pointing at a message highlights it and shows a control at its top right
   with five common reactions and a button for more. The control acts on the
   highlighted message. The context menu of a message has Add
