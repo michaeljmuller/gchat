@@ -287,7 +287,7 @@ struct MessageRowView: View {
                                 .foregroundStyle(.secondary)
                                 // On the time only. On the whole row, it showed
                                 // together with the names of a reaction.
-                                .help(time.formatted(date: .abbreviated, time: .shortened))
+                                .hoverLabel(time.formatted(date: .abbreviated, time: .shortened))
                         }
                     }
                 }
@@ -411,8 +411,6 @@ struct ReactionBar: View {
     let onAdd: () -> Void
     /// The reaction under the pointer.
     @State private var hovered: String?
-    /// The reaction whose names show above it.
-    @State private var showsNames: String?
     /// When GChat last came to the front.
     @State private var activatedAt = Date.distantPast
 
@@ -459,14 +457,7 @@ struct ReactionBar: View {
                     }
                 }
                 .buttonStyle(.plain)
-                // Drawn by the view and not a .help tooltip, which did not
-                // show on these buttons.
-                .overlay(alignment: .topLeading) {
-                    if showsNames == reaction.id {
-                        ReactionNames(text: names(reaction))
-                    }
-                }
-                .zIndex(showsNames == reaction.id ? 1 : 0)
+                .hoverLabel(names(reaction))
                 .onHover { inside in
                     if inside {
                         hovered = reaction.id
@@ -492,13 +483,6 @@ struct ReactionBar: View {
         .onChange(of: store.isAppActive) { _, isActive in
             if isActive { activatedAt = Date() }
         }
-        // The names show after a short pause on a reaction, like a tooltip.
-        .task(id: hovered) {
-            showsNames = nil
-            guard let hovered else { return }
-            try? await Task.sleep(for: .milliseconds(400))
-            if !Task.isCancelled { showsNames = hovered }
-        }
         .padding(.top, 2)
     }
 
@@ -510,12 +494,44 @@ struct ReactionBar: View {
     }
 }
 
-/// The names of the people who added a reaction, above it.
-struct ReactionNames: View {
+/// Shows a label above a view after a short pause of the pointer on it, like
+/// a tooltip. Used in place of .help, whose tooltip did not show on the
+/// reaction buttons, and whose delay cannot be shortened for one view.
+struct HoverLabel: ViewModifier {
+    let text: String
+    @State private var isHovering = false
+    @State private var shows = false
+
+    private static let delay: Duration = .milliseconds(400)
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .topLeading) {
+                if shows { HoverLabelView(text: text) }
+            }
+            .zIndex(shows ? 1 : 0)
+            .onHover { isHovering = $0 }
+            .task(id: isHovering) {
+                shows = false
+                guard isHovering else { return }
+                try? await Task.sleep(for: Self.delay)
+                if !Task.isCancelled { shows = true }
+            }
+    }
+}
+
+extension View {
+    func hoverLabel(_ text: String) -> some View {
+        modifier(HoverLabel(text: text))
+    }
+}
+
+/// The label of hoverLabel, clear above the view it belongs to.
+struct HoverLabelView: View {
     let text: String
     @State private var height: CGFloat = 0
 
-    /// The space between the label and the reaction.
+    /// The space between the label and the view.
     private static let gap: CGFloat = 6
 
     var body: some View {
@@ -530,8 +546,8 @@ struct ReactionNames: View {
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             // The widest it gets. A shorter text keeps its own width.
             .frame(width: 280, alignment: .leading)
-            // From the top of the reaction to clear above it, so that it
-            // does not cover the reaction.
+            // From the top of the view to clear above it, so that it does
+            // not cover the view.
             .offset(y: -(height + Self.gap))
             .allowsHitTesting(false)
     }
