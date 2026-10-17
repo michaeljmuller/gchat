@@ -391,6 +391,10 @@ for the names on hover and for the mark on the signed-in person's own. It
 lists them again only when the counts change. This costs one message read
 for each message with reactions that shows, once.
 
+The names show in a label that the transcript draws above the reaction,
+not in a tooltip (.help). The tooltip did not show on the reaction buttons
+(October 16, 2026).
+
 A click adds a reaction (reactions.create) or deletes the person's own
 (reactions.delete). The count changes when Google answers, not before.
 When a call fails, GChat reads the message again to show what Google has.

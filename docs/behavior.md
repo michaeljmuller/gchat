@@ -79,8 +79,8 @@ requests behind each feature are in requirements.md.
 - The context menu of an image or a chip has Open and Save As.
 - Files from Google Drive appear as a chip that opens in the browser.
 - Reactions show below a message: each emoji with its count. The ones that
-  the signed-in person added have an accent color. Pointing at a reaction
-  shows the names of the people who added it. A custom emoji of the
+  the signed-in person added have an accent color. When the pointer rests
+  on a reaction, the names of the people who added it show above it. A custom emoji of the
   organization shows as its name, for example :party-dog:, not as an image.
 - A click on a reaction adds the same reaction, or removes the person's own.
   Over the person's own reaction, a red X shows in place of the count.

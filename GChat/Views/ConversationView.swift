@@ -409,6 +409,8 @@ struct ReactionBar: View {
     let onAdd: () -> Void
     /// The reaction under the pointer.
     @State private var hovered: String?
+    /// The reaction whose names show above it.
+    @State private var showsNames: String?
     /// When GChat last came to the front.
     @State private var activatedAt = Date.distantPast
 
@@ -455,6 +457,15 @@ struct ReactionBar: View {
                     }
                 }
                 .buttonStyle(.plain)
+                // Drawn by the view and not a .help tooltip, which did not
+                // show on these buttons.
+                .overlay(alignment: .topLeading) {
+                    if showsNames == reaction.id {
+                        ReactionNames(text: names(reaction))
+                            .alignmentGuide(.top) { $0[.bottom] + 4 }
+                    }
+                }
+                .zIndex(showsNames == reaction.id ? 1 : 0)
                 .onHover { inside in
                     if inside {
                         hovered = reaction.id
@@ -462,7 +473,6 @@ struct ReactionBar: View {
                         hovered = nil
                     }
                 }
-                .help(names(reaction))
                 .accessibilityLabel("\(reaction.emoji.label) \(reaction.count): \(names(reaction))")
             }
             Button {
@@ -481,6 +491,13 @@ struct ReactionBar: View {
         .onChange(of: store.isAppActive) { _, isActive in
             if isActive { activatedAt = Date() }
         }
+        // The names show after a short pause on a reaction, like a tooltip.
+        .task(id: hovered) {
+            showsNames = nil
+            guard let hovered else { return }
+            try? await Task.sleep(for: .milliseconds(400))
+            if !Task.isCancelled { showsNames = hovered }
+        }
         .padding(.top, 2)
     }
 
@@ -489,6 +506,25 @@ struct ReactionBar: View {
         return reaction.users
             .map { $0.name == store.me?.user ? "You" : store.name(for: $0) }
             .formatted(.list(type: .and))
+    }
+}
+
+/// The names of the people who added a reaction, above it.
+struct ReactionNames: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.callout)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 5))
+            .overlay { RoundedRectangle(cornerRadius: 5).strokeBorder(.separator) }
+            .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+            .fixedSize(horizontal: false, vertical: true)
+            // The widest it gets. A shorter text keeps its own width.
+            .frame(width: 280, alignment: .leading)
+            .allowsHitTesting(false)
     }
 }
 

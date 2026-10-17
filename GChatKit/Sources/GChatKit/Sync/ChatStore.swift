@@ -898,6 +898,8 @@ public final class ChatStore {
                 requestProfile(user.name)
             }
         } catch {
+            // Cancelled when the message scrolls out of view. It loads again when it shows.
+            if error is CancellationError || (error as? URLError)?.code == .cancelled { return }
             if (error as? APIError)?.status == 429 { report(error) }
             Self.log.error("Reactions of \(message.name, privacy: .public) failed: \(String(describing: error), privacy: .public)")
         }
