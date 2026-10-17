@@ -339,6 +339,44 @@ import Testing
         #expect(reported == 0)
     }
 
+    @Test func aReactionToMyMessageIsReportedOnce() async throws {
+        let store = await makeStore()
+        var reported: [String] = []
+        store.onReaction = { _, message, reaction in
+            reported.append("\(reaction.user?.name ?? "") \(reaction.emoji.label) \(message.text ?? "")")
+        }
+        let mine = "spaces/team/messages/mine"
+        chat.update { state in
+            state.messages["spaces/team"]?.append(message("mine", in: "spaces/team", from: "users/me-id", at: now))
+            state.reactions[mine] = [
+                Reaction(name: "\(mine)/reactions/ann", user: User(name: "users/ann"), emoji: Emoji(unicode: "👍")),
+                Reaction(name: "\(mine)/reactions/me", user: User(name: "users/me-id"), emoji: Emoji(unicode: "👍")),
+            ]
+            state.reactions["spaces/team/messages/t1"] = [
+                Reaction(name: "spaces/team/messages/t1/reactions/bob", user: User(name: "users/bob"),
+                         emoji: Emoji(unicode: "🎉")),
+            ]
+        }
+        let created = WorkspaceEventsAPI.reactionCreated
+        let subject = "//chat.googleapis.com/spaces/team"
+        await store.handlePush(type: created, subject: subject, resource: "\(mine)/reactions/ann")
+        // Delivered twice by Pub/Sub.
+        await store.handlePush(type: created, subject: subject, resource: "\(mine)/reactions/ann")
+        // The person's own reaction, and a reaction to someone else's message.
+        await store.handlePush(type: created, subject: subject, resource: "\(mine)/reactions/me")
+        await store.handlePush(type: created, subject: subject, resource: "spaces/team/messages/t1/reactions/bob")
+        #expect(reported == ["users/ann 👍 mine"])
+
+        // Not while the conversation is on screen.
+        store.selection = "spaces/team"
+        chat.update { state in
+            state.reactions[mine]?.append(
+                Reaction(name: "\(mine)/reactions/cy", user: User(name: "users/cy"), emoji: Emoji(unicode: "❤️")))
+        }
+        await store.handlePush(type: created, subject: subject, resource: "\(mine)/reactions/cy")
+        #expect(reported.count == 1)
+    }
+
     @Test func aPushNoticeForAnUnknownConversationRefreshesTheList() async throws {
         let store = await makeStore()
         chat.update { state in

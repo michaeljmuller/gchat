@@ -99,6 +99,9 @@ public final class ChatStore {
 
     /// Called with new messages from other people in a conversation that is not in front.
     @ObservationIgnored public var onIncoming: ((Space, [Message]) -> Void)?
+    /// Called when someone else reacts to a message of the signed-in person,
+    /// unless the conversation is on screen. Only with push delivery.
+    @ObservationIgnored public var onReaction: ((Space, Message, Reaction) -> Void)?
     @ObservationIgnored public var onUnreadCountChanged: ((Int) -> Void)?
     @ObservationIgnored public var onAuthFailure: (() -> Void)?
 
@@ -133,6 +136,8 @@ public final class ChatStore {
     @ObservationIgnored private var lastActivity = Date.distantPast
     /// Names of messages that were already added, notified or marked read.
     @ObservationIgnored private var handledMessages: Set<String> = []
+    /// Names of reactions that were already reported. Pub/Sub can deliver a notice twice.
+    @ObservationIgnored private var handledReactions: Set<String> = []
     @ObservationIgnored private var reportedUnread = -1
     @ObservationIgnored private var refreshCount = 0
 
@@ -406,9 +411,14 @@ public final class ChatStore {
         case WorkspaceEventsAPI.messageDeleted:
             guard let resource else { return }
             transcripts[name]?.messages.removeAll { $0.name == resource }
-        case WorkspaceEventsAPI.reactionCreated, WorkspaceEventsAPI.reactionDeleted,
+        case WorkspaceEventsAPI.reactionCreated:
+            if let resource, let message = Reaction.messageName(of: resource) {
+                await reactionAdded(resource, to: message)
+            } else {
+                await refreshRecentReactions(in: Self.spaceName(of: name))
+            }
+        case WorkspaceEventsAPI.reactionDeleted,
              WorkspaceEventsAPI.reactionBatchCreated, WorkspaceEventsAPI.reactionBatchDeleted:
-            // No notification: Google Chat does not notify about reactions either.
             if let resource, let message = Reaction.messageName(of: resource) {
                 await reload(message: message)
             } else {
@@ -870,6 +880,28 @@ public final class ChatStore {
     }
 
     // MARK: - Reactions
+
+    /// Shows a new reaction, and reports it when it is someone else's on a
+    /// message of the signed-in person. Reads the message even when its
+    /// conversation is not loaded, to learn who sent it.
+    private func reactionAdded(_ reactionName: String, to messageName: String) async {
+        let spaceName = Self.spaceName(of: messageName)
+        guard let message = try? await chat.getMessage(messageName) else { return }
+        replace(message, in: spaceName)
+        guard isMine(message), !isViewing(spaceName), let space = space(named: spaceName),
+              handledReactions.insert(reactionName).inserted
+        else { return }
+        if handledReactions.count > 2000 { handledReactions.removeAll() }
+        // The notice names the reaction but not who added it.
+        guard let reactions = try? await chat.listReactions(of: messageName) else { return }
+        reactionDetails[messageName] = reactions
+        guard let reaction = reactions.first(where: { $0.name == reactionName }),
+              let user = reaction.user, user.name != me?.user
+        else { return }
+        if let name = user.displayName { noteName(name, for: user.name) }
+        if profiles[user.name] == nil, !user.isBot { await lookUp(user.name) }
+        onReaction?(space, message, reaction)
+    }
 
     public func reactions(on message: Message) -> [ReactionGroup] {
         let details = reactionDetails[message.name] ?? []

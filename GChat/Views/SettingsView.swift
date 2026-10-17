@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(Updater.self) private var updater
     @AppStorage(AppSettings.notificationsKey) private var notificationsEnabled = true
     @AppStorage(AppSettings.previewsKey) private var notificationPreviews = true
+    @AppStorage(AppSettings.reactionNotificationsKey) private var reactionNotifications = true
     @AppStorage(AppSettings.hideDeletedKey) private var hideDeletedUsers = true
     @AppStorage(AppSettings.hideUnnamedAppsKey) private var hideUnnamedApps = true
     @AppStorage(AppSettings.hideAppsKey) private var hideApps = false
@@ -90,9 +91,10 @@ struct SettingsView: View {
 
             Section("Notifications") {
                 Toggle("Notify me about new messages", isOn: $notificationsEnabled)
+                Toggle("Notify me about reactions to my messages", isOn: $reactionNotifications)
                 Toggle("Show message text in notifications", isOn: $notificationPreviews)
-                    .disabled(!notificationsEnabled)
-                if notificationsEnabled, !model.notificationsAllowed {
+                    .disabled(!notificationsEnabled && !reactionNotifications)
+                if notificationsEnabled || reactionNotifications, !model.notificationsAllowed {
                     LabeledContent {
                         Button("Open System Settings") { Notifier.openSystemSettings() }
                     } label: {

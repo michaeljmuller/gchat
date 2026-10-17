@@ -107,6 +107,9 @@ final class AppModel {
         store.onIncoming = { [weak self] space, messages in
             self?.notify(space: space, messages: messages)
         }
+        store.onReaction = { [weak self] space, message, reaction in
+            self?.notify(space: space, message: message, reaction: reaction)
+        }
         store.onUnreadCountChanged = { [weak self] count in
             self?.notifier.setBadge(count)
         }
@@ -156,6 +159,17 @@ final class AppModel {
         if !AppSettings.notificationPreviews { body = "New message" }
         if messages.count > 1 { body += " (and \(messages.count - 1) more)" }
         notifier.post(space: space.name, title: sender, subtitle: conversation, body: body)
+    }
+
+    private func notify(space: Space, message: Message, reaction: Reaction) {
+        guard let store, AppSettings.reactionNotificationsEnabled else { return }
+        let person = store.name(for: reaction.user)
+        let conversation = space.kind == .directMessage ? nil : store.title(for: space)
+        var body = "Reacted \(reaction.emoji.label) to your message"
+        if AppSettings.notificationPreviews, let text = message.text, !text.isEmpty {
+            body = "Reacted \(reaction.emoji.label) to \u{201C}\(text)\u{201D}"
+        }
+        notifier.post(space: space.name, title: person, subtitle: conversation, body: body)
     }
 
     private func observeSystem() {
@@ -208,6 +222,7 @@ enum SidebarSort: String, CaseIterable, Identifiable {
 enum AppSettings {
     static let notificationsKey = "notificationsEnabled"
     static let previewsKey = "notificationPreviews"
+    static let reactionNotificationsKey = "reactionNotificationsEnabled"
     static let hideDeletedKey = "hideDeletedUserConversations"
     static let showDatesKey = "showSidebarDates"
     static let sidebarSortKey = "sidebarSort"
@@ -236,6 +251,10 @@ enum AppSettings {
 
     static var notificationsEnabled: Bool {
         UserDefaults.standard.object(forKey: notificationsKey) as? Bool ?? true
+    }
+
+    static var reactionNotificationsEnabled: Bool {
+        UserDefaults.standard.object(forKey: reactionNotificationsKey) as? Bool ?? true
     }
 
     static var notificationPreviews: Bool {

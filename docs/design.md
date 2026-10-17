@@ -412,9 +412,23 @@ Custom emoji of the organization show as their name. Their image needs the
 customEmojis API and its own scope, so a new sign-in for everyone. Left out
 for now (to-do.md).
 
-No notification for a reaction to the person's own message. Google Chat
-does not make one on the Mac either, and a notification for each thumbs-up
-is noise.
+A reaction of someone else to the person's own message makes a
+notification. The owner asked for it on October 16, 2026. Google Chat does
+not make one on the Mac, so a setting turns it off. Only reactions to the
+person's own messages notify, because a notification for each thumbs-up in
+a busy space is noise.
+
+On a reaction.v1.created notice, GChat reads the message, also when its
+conversation is not loaded, to learn who sent it. That is one message read
+for each reaction in any conversation. For the person's own message it
+also lists the reactions, because the notice does not say who added the
+reaction. Each reaction notifies once, since Pub/Sub can deliver a notice
+twice.
+
+Without push delivery there are no reaction notifications. Polling finds
+reactions only in the open conversation while GChat is in front, and then
+the conversation is on screen. A batch event does not notify either,
+because it names no single reaction.
 
 The scope chat.messages, which GChat has, covers reactions and their
 events, according to the reference pages of the Chat API in October 2026.

@@ -95,7 +95,8 @@ requests behind each feature are in requirements.md.
   Emoji, or Control-Command-Space).
 - When GChat is in the background, the control does not show, and a click
   on a reaction only brings GChat to the front.
-- Reactions do not make notifications.
+- A reaction of someone else to a message of the signed-in person makes a
+  notification (Notifications and the Dock, below).
 - Older messages load when the transcript is scrolled to the top, or with
   Load Earlier Messages.
 - When a message arrives and the end of the transcript is in view, the
@@ -172,6 +173,10 @@ requests behind each feature are in requirements.md.
 
 - GChat posts a notification for each new message from another person in a
   conversation that is not on screen. A click opens that conversation.
+- GChat posts a notification when someone else reacts to a message of the
+  signed-in person, in a conversation that is not on screen. It shows who,
+  the emoji and the message text. This needs push delivery: while GChat
+  polls, reactions make no notifications.
 - The Dock icon shows the number of unread conversations.
 - Closing the window leaves GChat running, so notifications continue. A
   click on the Dock icon shows the window again.
@@ -218,6 +223,7 @@ Command-1 to Command-9.
 Notifications:
 
 - Notify me about new messages. On by default.
+- Notify me about reactions to my messages. On by default.
 - Show message text in notifications. On by default.
 - If macOS has notifications turned off for GChat, a warning shows with a
   button that opens System Settings.
