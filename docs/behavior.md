@@ -80,7 +80,9 @@ requests behind each feature are in requirements.md.
 - Files from Google Drive appear as a chip that opens in the browser.
 - Reactions show below a message: each emoji with its count. The ones that
   the signed-in person added have an accent color. When the pointer rests
-  on a reaction, the names of the people who added it show above it. A custom emoji of the
+  on a reaction, the names of the people who added it show above it.
+  The full date and time of a message show when the pointer rests on its
+  time. A custom emoji of the
   organization shows as its name, for example :party-dog:, not as an image.
 - A click on a reaction adds the same reaction, or removes the person's own.
   Over the person's own reaction, a red X shows in place of the count.

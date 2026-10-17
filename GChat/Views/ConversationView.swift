@@ -285,6 +285,9 @@ struct MessageRowView: View {
                             Text(time, format: .dateTime.hour().minute())
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                                // On the time only. On the whole row, it showed
+                                // together with the names of a reaction.
+                                .help(time.formatted(date: .abbreviated, time: .shortened))
                         }
                     }
                 }
@@ -309,7 +312,6 @@ struct MessageRowView: View {
         }
         .padding(.vertical, 3)
         .padding(.horizontal, Self.highlightInset)
-        .help(message.createTime?.formatted(date: .abbreviated, time: .shortened) ?? "")
         // The message that the reaction control belongs to is highlighted.
         .background(
             Color.primary.opacity(showsControl ? 0.06 : 0),
@@ -462,7 +464,6 @@ struct ReactionBar: View {
                 .overlay(alignment: .topLeading) {
                     if showsNames == reaction.id {
                         ReactionNames(text: names(reaction))
-                            .alignmentGuide(.top) { $0[.bottom] + 4 }
                     }
                 }
                 .zIndex(showsNames == reaction.id ? 1 : 0)
@@ -512,6 +513,10 @@ struct ReactionBar: View {
 /// The names of the people who added a reaction, above it.
 struct ReactionNames: View {
     let text: String
+    @State private var height: CGFloat = 0
+
+    /// The space between the label and the reaction.
+    private static let gap: CGFloat = 6
 
     var body: some View {
         Text(text)
@@ -522,8 +527,12 @@ struct ReactionNames: View {
             .overlay { RoundedRectangle(cornerRadius: 5).strokeBorder(.separator) }
             .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
             .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             // The widest it gets. A shorter text keeps its own width.
             .frame(width: 280, alignment: .leading)
+            // From the top of the reaction to clear above it, so that it
+            // does not cover the reaction.
+            .offset(y: -(height + Self.gap))
             .allowsHitTesting(false)
     }
 }
